@@ -1,0 +1,29 @@
+\section{Ogólny zarys modelu}
+Agent na podstawie uzyskiwanych od pozostałych graczy informacji, na podstawie zawieranych porozumień oraz własnej obserwacji otoczenia powinien budować model przekonań, o różnym poziomie pewności. Bazując na tak zgromadzonej wiedzy oraz na bieżącej ocenie sytuacji taktycznej i strategicznej w danej turze agent powinien podjąć najlepsze z jego punktu widzenia decyzje. W tym celu zostanie zbudowany model akcji i scenariuszy. Akcją może być każde możliwe posunięcie agenta w bieżącej turze, w szczególności wszelkie rozkazy wydawane jednostkom, decyzje budowania i rozwiązania jednostek, wysyłanie określonych komunikatów do innych graczy. Scenariuszem jest pewien zbiór niesprzecznych ze sobą akcji. Scenariusze mogą wzajemnie się wykluczać, tworząc zestawy alternatywnych scenariuszy np. zestaw dla frontu wschodniego i dla zachodniego. Agent planując posunięcia w danej turze buduje listę scenariuszy, punktując je w zależności od spodziewanych korzyści. Na podstawie wybranych scenariuszy agent negocjuje z pozostałymi graczami, wymienia z nimi informacje i następnie aktualizuje listę scenariuszy uwzględniając uzyskane informacje. Na koniec agent wybiera najwyżej przez siebie punktowany zbiór niewykluczających się wzajemnie scenariuszy i wykonuje wszystkie związane z nimi posunięcia.
+
+\section{Warstwy AI agenta}
+System decyzyjny agenta będzie składał się z dwóch warstw:
+\begin{itemize}
+	\item{taktycznej}
+	\item{strategicznej}
+\end{itemize}
+
+Celem warstwy taktycznej jest ocena zagrożenia prowincji agenta w danej turze oraz ocena możliwości ataku sąsiednich prowincji. Wynikiem działania warstwy taktycznej jest lista scenariuszy, opisujących zestawy posunięć możliwych do wykonania w danej turze przy użyciu dostępnych jednostek agenta wraz z oceną każdego scenariusza.
+
+Warstwa strategiczna bazuje na liście scenariuszy otrzymanej od warstwy taktycznej i modyfikuje ją / rozszerza na podstawie posiadanej wiedzy na temat relacji między graczami. W gestii tej warstwy leży komunikacja z pozostałymi graczami i np. uzależnienie wykonania pewnych scenariuszy od uzyskania konkretnej odpowiedzi na propozycję współpracy.
+
+Dzięki prostocie modelu decyzji - jest nim lista scenariuszy przetwarzanych przez kolejne warstwy - możliwe będzie testowanie działania graczy o różnym usposobieniu (poprzez parametryzację wpływu poszczególnych ocen na końcową ocenę scenariusza) np.:
+\begin{itemize}
+	\item{agenci bazujący na wiedzy taktycznej / agenci opierający swoje posunięcia na dyplomacji}
+	\item{agenci lojalni / nastawieni egoistycznie}
+\end{itemize}
+
+\section{Schemat działania agenta}
+\begin{enumerate}
+	\item{Ocena taktyczna sytuacji - utworzenie listy scenariuszy}
+	\item{Ocena sytuacji w oparciu o model przekonań - aktualizacja listy scenariuszy}
+	\item{Negocjacje}
+	\item{Modyfikacja scenariuszy w oparciu o uzyskaną wiedzę}
+	\item{Wykonanie posunięć taktycznych}
+\end{enumerate}
+

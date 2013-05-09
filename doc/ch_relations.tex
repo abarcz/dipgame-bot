@@ -1,0 +1,11 @@
+Agent prowadzący negocjacje z innymi graczami powinien zachowywać się racjonalnie wobec ich postępowania oraz własnej oceny zagrożenia z ich strony. W tym celu zostanie zaimplementowany model relacji z pozostałymi graczami. Planowany model będzie dla każdego agenta opisywał jego przekonania na temat pozostałych graczy, przy użyciu skali punktowych, wyrażających niezależnie:
+\begin{itemize}
+	\item{zaufanie do drugiego gracza}
+	\item{ocenę siły drugiego gracza}
+\end{itemize}
+
+\section{Zaufanie}
+Zaufanie do drugiego gracza odzwierciedla jego przeszłe zachowania wobec analizowanego agenta. Gracz, z którym agent wcześniej nie wchodził w żadne interakcje jest dla agenta neutralny. Wszelkie odmowy porozumienia, łamanie porozumień, wrogie zachowania (np. militaryzacja granicy) powinny skutkować obniżeniem zaufania. Podejmowanie wspólnie uzgodnionych akcji powinno skutkować w zwiększaniu się zaufania do gracza.
+
+\section{Ocena siły}
+Opieranie relacji z drugim graczem wyłącznie na podstawie zaufania może być ryzykowne. Przykładowo, gracz z którym pozostajemy w sojuszu może stać się na tyle potężny, że w pewnym momencie może z łatwością nas zdradzić i zniszczyć. Z drugiej strony osłabiony sojusznik może stanowić cenny obszar podboju w momencie braku zewnętrznego zagrożenia. W tym celu zostanie wprowadzona dodatkowa skala punktowa, opisująca przekonania agenta o sile pozostałych graczy.

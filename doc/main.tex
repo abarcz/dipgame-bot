@@ -1,0 +1,52 @@
+\documentclass[11pt,a4paper]{report}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=RoyalBlue]{hyperref}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{alltt}
+\usepackage{booktabs} % eleganckie tabelki
+\usepackage{graphicx}
+\usepackage{bm}
+
+\newcounter{liczp}
+\newenvironment{example}{\refstepcounter{liczp}{\noindent
+{\bf Przykład~\theliczp:}\,}}
+
+
+\addtolength{\textwidth}{4cm}
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textheight}{4cm}
+\addtolength{\voffset}{-2cm}
+\date {\today}
+\author {
+	Piotr Bałut
+	\and
+	Aleksy Barcz
+	\and
+	Piotr Dubiel}
+\title{Agent na platformę DipGame\\dokumentacja projektowa}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\bibliographystyle{plain}
+
+\chapter{Cel projektu}
+\input{ch_goal}
+
+\chapter{Platforma implementacji}
+\input{ch_platform}
+
+\chapter{Składowe projektu}
+\input{ch_implementation}
+
+\chapter{Model relacji}
+\input{ch_relations}
+
+\chapter{Model przekonań i decyzji}
+\input{ch_decisions}
+
+\nocite{*}
+\bibliography{main}
+
+\end{document}
