@@ -87,11 +87,11 @@ public class SagBot extends Bot {
 		
 		negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
 		negotiator.init();
+		negotiator.setKnowledgeBase(knowledgeBase);
 		
 		((SagOrderEvaluator) this.orderEvaluator).setKnowledgeBase(knowledgeBase);
 		((SagOptionEvaluator) this.optionEvaluator).setKnowledgeBase(knowledgeBase);
 		((SagProvinceEvaluator) this.provinceEvaluator).setKnowledgeBase(knowledgeBase);
-		negotiator.setKnowledgeBase(knowledgeBase);
 	}
 	
 	public HashMap<String, String> getRegionControllers() {
