@@ -7,6 +7,6 @@
 	<classpathentry kind="lib" path="lib/negoClient-2.1-all.jar" sourcepath="/home/alex/dipgame-bot/src/negoClient-src/lib/dipNego-2.1.jar"/>
 	<classpathentry kind="lib" path="lib/tcpIpComm-0.1.2.jar"/>
 	<classpathentry kind="lib" path="lib/utilities-1.0.3.jar"/>
-	<classpathentry kind="lib" path="/home/alex/dipgame-bot/src/SagBot/lib/bot-1.6.jar"/>
+	<classpathentry kind="lib" path="lib/bot-1.6.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
