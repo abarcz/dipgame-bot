@@ -1,0 +1,11 @@
+propose(agree(peace([eng fra ]),[eng fra ]),eng,[fra ])
+accept(agree(peace([eng fra ]),[eng fra ]),fra,[tur ])
+
+propose(agree(peace([ita fra ]),[ita fra ]),ita,[fra ])
+
+
+propose(agree(peace([eng ger ]),[eng ger ]),ger,[eng ])
+
+
+
+FRA->ENG propose([commit(and(and(do(move(unit(eng, region(lvp, inland)),region(wal, inland))), do(move(unit(eng, region(edi, coast)),region(nth, coast)))), do(support(unit(eng, region(lon, coast)),move(unit(eng, region(edi, coast)),region(nth, coast))))),eng,[fra ])],fra,[eng ])

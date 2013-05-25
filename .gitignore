@@ -1,4 +1,7 @@
 *.swp
 .metadata
-.project
-.classpath
+bin
+export
+*.log
+META-INF
+SagBot/es

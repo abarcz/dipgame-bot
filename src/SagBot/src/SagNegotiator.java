@@ -1,88 +1,223 @@
+
+
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.List;
+import java.util.Random;
+import java.util.Vector;
 
+import org.dipgame.dipNego.language.illocs.Accept;
+import org.dipgame.dipNego.language.illocs.Illocution;
+import org.dipgame.dipNego.language.illocs.Propose;
+import org.dipgame.dipNego.language.illocs.Reject;
+import org.dipgame.dipNego.language.infos.Agree;
+import org.dipgame.dipNego.language.infos.Deal;
+import org.dipgame.dipNego.language.offers.Alliance;
+import org.dipgame.dipNego.language.offers.Offer;
+import org.dipgame.dipNego.language.offers.Peace;
 import org.dipgame.negoClient.DipNegoClient;
 import org.dipgame.negoClient.Negotiator;
 import org.dipgame.negoClient.simple.DipNegoClientHandler;
 import org.dipgame.negoClient.simple.DipNegoClientImpl;
 import org.json.JSONException;
 
-/**
- * SagNegotiator is a negotiator about peace, alliances and/or orders.
- * 
- * @author Angela Fabregues, IIIA-CSIC, fabregues@iiia.csic.es
- */
-public class SagNegotiator implements Negotiator {
+import es.csic.iiia.fabregues.dip.Player;
+import es.csic.iiia.fabregues.dip.board.Power;
+import es.csic.iiia.fabregues.utilities.Log;
 
-	private SagBot player;
-	private InetAddress negoServerIp;
-	private int negoServerPort;
-	private DipNegoClientHandler handler;
-	private DipNegoClient client;
-	private Boolean isDisconnecting = new Boolean(false);
+/**
+ * Based on RandomNegotiator
+ */
+public class SagNegotiator implements Negotiator{
 	
-	public SagNegotiator(InetAddress negoServerIp, int negoServerPort, SagBot player) {
-		this.negoServerIp = negoServerIp;
-		this.negoServerPort = negoServerPort;
+	private Player player;
+	private Log log;
+	
+	//Negotiation variables
+	private int negotiationPort;
+	private InetAddress negotiationServer;
+	private DipNegoClient chat;
+	private Random rand;
+	private KnowledgeBase knowledgeBase;
+	
+	private boolean occupied;
+	
+	public SagNegotiator(InetAddress negotiationIp, int negotiationPort, Player player){
+		this.negotiationServer = negotiationIp;
+		this.negotiationPort = negotiationPort;
 		this.player = player;
+		this.log = player.log.getLog();
+		//this.log = new Interface(name+"_"+System.currentTimeMillis());
+		this.rand = new Random(System.currentTimeMillis());
+		occupied = false;
+	}
+
+	public void setKnowledgeBase(KnowledgeBase base) {
+		this.knowledgeBase = base;
 	}
 	
 	/**
-	 * Handling the game starting (because SagBot call this method from its start method)
+	 * Inits the negotiation
 	 */
-	@Override
 	public void init() {
-		this.handler = new SagNegotiationHandler(this);
-		client = new DipNegoClientImpl(negoServerIp, negoServerPort, player.getName(), handler);
+		DipNegoClientHandler handler = new DipNegoClientHandler() {
+			
+			@Override
+			public void handleServerOff() {
+				
+			}
+			
+			@Override
+			public void handleErrorMessage(String arg0) {
+				
+			}
+
+			@Override
+			public void handleClientAccepted() {
+
+				
+			}
+
+			@Override
+			public void handleFirstGamePhase() {
+
+				
+			}
+
+			/** Receives only messages sent directly to me - no other recipients */
+			@Override
+			public void handleNegotiationMessage(Power from, List<Power> to, Illocution illocution) {
+				String recipients = "";
+				for (Power power : to) {
+					recipients = recipients + ", " + power.getName();
+				}
+				//System.out.println("received msg from: " + from.getName()
+				//		+ " to: " + recipients
+				//		+ " text: " + illocution.getString());
+				occupied = true;
+				if (illocution instanceof Propose) {
+					Deal deal = ((Propose)illocution).getDeal();
+					if (deal instanceof Agree) {
+						Offer offer = ((Agree)deal).getOffer();
+						Vector<Power> too = null;
+						Illocution response = null;
+						switch (offer.getType()) {
+						case PEACE:
+							too = new Vector<Power>(1);
+							too.add(illocution.getSender());
+							if(rand.nextBoolean()){
+								response = new Accept(player.getMe(), too, deal);
+							}else{
+								response = new Reject(player.getMe(), too, deal);
+							}
+							break;
+						case ALLIANCE:
+							too = new Vector<Power>(1);
+							too.add(illocution.getSender());
+							if(rand.nextBoolean()){
+								response = new Accept(player.getMe(), too, deal);
+							}else{
+								response = new Reject(player.getMe(), too, deal);
+							}
+							break;
+						}
+						
+						// We have a new diplomaticAction to be performed
+						if (response != null) {
+							sendDialecticalAction(response);
+							//TODO update knowledge base
+						}
+					}
+				}
+				occupied = false;
+				
+			}
+
+			@Override
+			public void handleNewGamePhase() {
+
+				
+			}
+		};
+		chat = new DipNegoClientImpl(negotiationServer, negotiationPort, player.getMe().getName(), handler, log);
 		try {
-			client.init();
-		} catch (IOException e) {
-			System.err.println(e.getMessage());
-			player.exit();
+			chat.init();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		} catch (JSONException e1) {
+			e1.printStackTrace();
+		}
+		
+		log.print("Negotiation module initiated.");
+	}
+	
+	/**
+	 * Sends negotiation proposals randomly
+	 */
+	public void negotiate(){
+		if( rand.nextInt(70) == 0){
+			List<Power> available = new Vector<Power>(7);
+			for(Power power: player.getGame().getPowers()){
+				if(power.getControlledRegions().size()>0){
+					available.add(power);
+				}
+			}
+			Power receiver = available.get(rand.nextInt(available.size()));
+			if(receiver.equals(player.getMe())){
+				return;
+			}
+			Deal deal = null;
+			if(rand.nextBoolean()){
+				List<Power> peace = new Vector<Power>(2);
+				peace.add(player.getMe());
+				peace.add(receiver);
+				deal = new Agree(peace, new Peace(peace));
+			}else{
+				List<Power> peace = new Vector<Power>(2);
+				peace.add(player.getMe());
+				peace.add(receiver);
+				
+				Power againstPower = available.get(rand.nextInt(available.size()));
+				if(againstPower.equals(receiver) || againstPower.equals(player.getMe())){
+					return;
+				}
+				List<Power> against = new Vector<Power>(1);
+				against.add(againstPower);
+				deal = new Agree(peace, new Alliance(peace, against));
+			}
+			Illocution illoc = new Propose(player.getMe(), receiver, deal);
+			sendDialecticalAction(illoc);
+			//TODO update knowledgeBase
+
+			//System.out.println("sending msg to: " + receiver.getName()
+			//		+ " text: " + illoc.getString());
+		}
+	}
+	
+	/**
+	 * Sends a negotiation message
+	 * @param illoc
+	 */
+	private void sendDialecticalAction(Illocution illoc) {
+		try {
+			Vector<String> recvs = new Vector<String>();
+			for(Power rec : illoc.getReceivers()){
+				recvs.add(rec.getName());
+			}
+			chat.send(recvs, illoc);
 		} catch (JSONException e) {
-			// It won't happen
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	/**
-	 * Handling negotiation phase
-	 */
-	@Override
-	public void negotiate() {
-		//Decide how the negotiation should be
+	public void disconnect() {
+		chat.disconnect();
 	}
 
 	@Override
 	public boolean isOccupied() {
-		return false;
-	}
-	
-	/**
-	 * Disconnecting from the negotiation server
-	 */
-	@Override
-	public void disconnect() {
-		//checking whether it was disconnecting avoiding death locks
-		boolean wasDisconnecting = false;
-		synchronized (isDisconnecting) {
-			wasDisconnecting = isDisconnecting;
-			isDisconnecting = true;
-		}
-		
-		if (!wasDisconnecting) {
-			//Disconnecting from the negotiation server
-			try {
-				client.disconnect();
-			} catch(Exception e) {
-				System.err.println(e.getMessage());
-			}
-			//Disconnecting from the game server
-			try {
-				player.exit();
-			} catch(Exception e) {
-				System.err.println(e.getMessage());
-			}
-		}
+		return occupied;
 	}
 }

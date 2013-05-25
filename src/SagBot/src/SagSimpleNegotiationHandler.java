@@ -10,11 +10,11 @@ import es.csic.iiia.fabregues.dip.board.Power;
  * 
  * @author Angela Fabregues, IIIA-CSIC, fabregues@iiia.csic.es
  */
-public class SagNegotiationHandler implements DipNegoClientHandler {
+public class SagSimpleNegotiationHandler implements DipNegoClientHandler {
 	
-	private SagNegotiator negotiator;
+	private SagSimpleNegotiator negotiator;
 	
-	public SagNegotiationHandler(SagNegotiator negotiator) {
+	public SagSimpleNegotiationHandler(SagSimpleNegotiator negotiator) {
 		this.negotiator = negotiator;
 	}
 
@@ -23,6 +23,7 @@ public class SagNegotiationHandler implements DipNegoClientHandler {
 	 */
 	@Override
 	public void handleClientAccepted() {
+		System.out.println("Negotiation handler accepted by server");
 
 	}
 

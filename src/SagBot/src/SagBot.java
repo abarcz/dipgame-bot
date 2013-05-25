@@ -1,151 +1,229 @@
+
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 
-import es.csic.iiia.fabregues.dip.Player;
+import es.csic.iiia.fabregues.bot.Bot;
+import es.csic.iiia.fabregues.bot.options.Option;
+import es.csic.iiia.fabregues.bot.options.OptionBoard;
+import es.csic.iiia.fabregues.dip.board.Power;
+import es.csic.iiia.fabregues.dip.board.Province;
 import es.csic.iiia.fabregues.dip.board.Region;
-import es.csic.iiia.fabregues.dip.comm.CommException;
 import es.csic.iiia.fabregues.dip.comm.IComm;
 import es.csic.iiia.fabregues.dip.comm.daide.DaideComm;
-import es.csic.iiia.fabregues.dip.orders.DSBOrder;
-import es.csic.iiia.fabregues.dip.orders.HLDOrder;
+import es.csic.iiia.fabregues.dip.orders.MTOOrder;
 import es.csic.iiia.fabregues.dip.orders.Order;
-import es.csic.iiia.fabregues.dip.orders.REMOrder;
-import es.csic.iiia.fabregues.dip.orders.WVEOrder;
 
 /**
- * SagBot is a skeleton to support the development of a bot capable to play DipGame negotiating about peace, alliances and/or orders.
- * 
- * @author Angela Fabregues, IIIA-CSIC, fabregues@iiia.csic.es
+ * Bot based on a merge of RandomBot and RandomNegotiatorRandomBot
  */
-public class SagBot extends Player {
+public class SagBot extends Bot {
 
-	private InetAddress negoServerIp;
-	private int negoServerPort;
+	//Negotiation variables
+	private int negotiationPort;
+	private InetAddress negotiationServer;
 	private SagNegotiator negotiator;
-	 
-	public SagBot(InetAddress negoServerIp, int negoServerPort) {
-		super();
-		this.negoServerIp = negoServerIp;
-		this.negoServerPort = negoServerPort;
+	
+	private static String name = "SagBot";
+	protected Random rand;
+	private boolean debugMode;
+	private BotObserver botObserver;
+	private String powerName;
+	private KnowledgeBase knowledgeBase;
+	
+	/**
+	 *
+	 */
+	public SagBot(InetAddress negotiationIp, int negotiationPort) {
+		super(new SagProvinceEvaluator(), new SagOrderEvaluator(), new SagOptionEvaluator());
+		this.negotiationServer = negotiationIp;
+		this.negotiationPort = negotiationPort;
+		this.debugMode = false;
+		this.botObserver = new BotObserver();
 	}
 
+	public void setDebug(boolean debugMode) {
+		this.debugMode = debugMode;
+		System.out.println("Setting debug mode to: " + debugMode);
+	}
+
+	@Override
 	/**
-	 * Handling being accepted in a game
+	 * Sets the number of options to preselect during the search of best options
 	 */
+	protected int getNumberOfBestOptions() {
+		return 2;
+	}
+
+	@Override
+	/**
+	 * Sets the number of orders per unit to preselect during the search of best orders
+	 */
+	protected int getNumberOfBestOrdersPerUnit() {
+		return 2;
+	}
+
 	@Override
 	public void init() {
-		negotiator = new SagNegotiator(negoServerIp, negoServerPort, this);
+		System.out.println("Initializing..");
+		rand = new Random(System.currentTimeMillis());
+		System.out.println("Map " + mapName);
 	}
-
-	/**
-	 * Handling the game starting
-	 */
+	
 	@Override
 	public void start() {
-	  negotiator.init();
-	}
-	
-	/**
-	 * Decide what orders to send to your units
-	 */
-	@Override
-	public List<Order> play() {
-		negotiator.negotiate();	//TODO negotiations should probably be made after the tactic planning phase
-
-		/* HoldBot code */
-		List<Order> orders = new Vector<Order>();
-		switch (game.getPhase()) {
-		case SPR:
-		case FAL:
-			//Holding all controlled units
-			for (Region unit: me.getControlledRegions()) {
-				HLDOrder hldOrder = new HLDOrder(me, unit);
-				orders.add(hldOrder);
-			}
-			break;
-		case SUM:
-		case AUT:
-			//Disbanding all dislodged units
-			for (Region dislodgedUnit: game.getDislodgedRegions(me)) {
-				DSBOrder dsbOrder = new DSBOrder(dislodgedUnit, me);
-				orders.add(dsbOrder);
-			}
-			break;
-		default:
-			//That's WIN
-			int nBuilds = me.getOwnedSCs().size() - me.getControlledRegions().size ();
-			if (nBuilds > 0) {
-				//Waiving nBuilds times
-				for (int i = 0; i < nBuilds; i++) {
-					WVEOrder wveOrder = new WVEOrder(me);
-					orders.add(wveOrder);
-				}
-			} else if (nBuilds < 0) {
-				//Removing nBuilds units
-				int nRemovals = -nBuilds;
-				for (int i = 0; i < nRemovals; i++) {
-					Region remUnit = me.getControlledRegions().get (i);
-					REMOrder remOrder = new REMOrder(me, remUnit);
-					orders.add(remOrder);
-				}
-			}
-			break;
-		}
-		return orders;
-	}
-	
-	/**
-	 * Handling the reception of previous phase performed orders
-	 */
-	@Override
-	public void receivedOrder(Order arg0) {
+		System.out.println("Starting game..");
+		powerName = getMe().getName();
+		System.out.println("We are " + powerName);
 		
+		knowledgeBase = new KnowledgeBase(powerName);
+		
+		negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
+		negotiator.init();
+		
+		((SagOrderEvaluator) this.orderEvaluator).setKnowledgeBase(knowledgeBase);
+		((SagOptionEvaluator) this.optionEvaluator).setKnowledgeBase(knowledgeBase);
+		((SagProvinceEvaluator) this.provinceEvaluator).setKnowledgeBase(knowledgeBase);
+		negotiator.setKnowledgeBase(knowledgeBase);
+	}
+	
+	public HashMap<String, String> getRegionControllers() {
+		HashMap<String, String> controllers = new HashMap<String, String>();
+		for (Power power : game.getPowers()) {
+			for (Region region : power.getControlledRegions()) {
+				controllers.put(region.getName(), power.getName());
+			}
+		}
+		return controllers;
+	}
+	
+	public HashMap<String, String> getScOwners() {
+		HashMap<String, String> owners = new HashMap<String, String>();
+		for (Power power : game.getPowers()) {
+			for (Province province : power.getOwnedSCs()) {
+				owners.put(province.getName(), power.getName());
+			}
+		}
+		return owners;
+	}
+
+	@Override
+	/**
+	 * Receive all orders made by all players, including myself
+	 */
+	public void receivedOrder(Order order) {
+		//System.out.println("receivedOrder: " + order.toString());
+		HashMap<String, String> controllers = getRegionControllers();
+		HashMap<String, String> owners = getScOwners();
+		
+		// check if an attack on an army or SC is made
+		if (order instanceof MTOOrder) {
+			MTOOrder mtoOrder = (MTOOrder) order;
+			String orderMaker = order.getPower().getName();
+			String regionName = mtoOrder.getDestination().getName();
+			String provinceName = mtoOrder.getDestination().getProvince().getName();
+			if (controllers.containsKey(regionName)) {
+				String ownerName = controllers.get(regionName);
+				if (!ownerName.equals(orderMaker)) {
+					addAggression(orderMaker, ownerName);
+				}
+			} else if (owners.containsKey(provinceName)) {
+				String ownerName = owners.get(provinceName);
+				if (!ownerName.equals(orderMaker)) {
+					addAggression(orderMaker, ownerName);
+				}
+			}
+		}
+		negotiator.negotiate();
+	}
+	
+	public void addAggression(String aggressor, String victim) {
+		System.out.println(victim + " is under attack of " + aggressor);
+		this.knowledgeBase.addAggression(aggressor, victim);
+	}
+
+	@Override
+	/**
+	 * Selects the orders to send from the preselected ones that are stored in optionBoard
+	 */
+	protected List<Order> selectOption(OptionBoard optionBoard) {
+		if (this.debugMode) {
+			System.out.println("starting round. press Enter to continue or type 'auto' to go on without prompting..");
+			BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+			String command;
+			try {
+				command = reader.readLine();
+				if (command.equals("auto")) {
+					setDebug(false);
+				}
+			} catch (IOException ioe) {
+				System.out.println("IO error waiting for enter!");
+			}
+		}
+
+		if(optionBoard.getOptions().size()>0){
+			Option option = optionBoard.getOptions().get(rand.nextInt(optionBoard.getOptions().size()));
+			optionBoard.selectOption(option);
+			return optionBoard.getSelectedOrders();
+		}
+		return new Vector<Order>(0);
+	}
+	
+	public void exit(){
+		super.exit();
+		if(negotiator!=null){
+			negotiator.disconnect();
+		}
 	}
 	
 	/**
-	 * Program that runs SagBot connected to a gameManager (gameServer + negoServer)
+	 * Main method. It allows to connect and reconnect to a game.
+	 * 
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		InetAddress negoServerIp;
-		int negoServerPort;
-		InetAddress gameServerIp;
-		int gameServerPort;
-		String name;
+		SagBot sagBot = null;
+		String usageString = "Usage:\n  " + name + " <ip> <port> <name>  <negotiation ip> <negotiation port> (<debug>)";
 		try {
 			if (args.length == 0) {
+				InetAddress negoServerIp;
+				int negoServerPort;
+				InetAddress gameServerIp;
+				int gameServerPort;
+				String name = "SagBot";
 				gameServerIp = InetAddress.getLocalHost();
 				gameServerPort = 16713;
 				negoServerIp = InetAddress.getLocalHost();
 				negoServerPort = 16714;
-				name = "SagBot";
-			} else if (args.length == 5) {
-				gameServerIp = InetAddress.getByName(args[0]);
-				gameServerPort = Integer.valueOf(args[1]);
-				negoServerIp = InetAddress.getByName(args[2]);
-				negoServerPort = Integer.valueOf(args[3]);
-				name = args[4];
+				System.out.println(name + " connecting to: " + gameServerIp + ":" + gameServerPort);
+				sagBot = new SagBot(negoServerIp, negoServerPort);
+				IComm comm = new DaideComm(gameServerIp, gameServerPort, name);
+				sagBot.start(comm);
+			}  else if (args.length >= 5) {
+				sagBot = new SagBot(InetAddress.getByName(args[3]), Integer.parseInt(args[4]));
+				if (args.length == 6) {
+					sagBot.setDebug(Boolean.valueOf(args[5]));
+				}
+				IComm comm = new DaideComm(InetAddress.getByName(args[0]), Integer.parseInt(args[1]), name + "(" + args[2] + ")");
+				sagBot.start(comm);
 			} else {
-				System.err.println("Usage:\n SagBot [<gameServerIp> <gameServerPort> <negoServerIp> <negoServerPort> <name>]");
-				return;
+				System.err.println(usageString);
 			}
-		} catch (UnknownHostException e) {
-			System.err.println("Usage:\n SagBot [<gameServerIp> <gameServerPort> <negoServerIp> <negoServerPort> <name>]");
-			return;
-		} catch (NumberFormatException e) {
-			System.err.println("Usage:\n SagBot [<gameServerIp> <gameServerPort> <negoServerIp> <negoServerPort> <name>]");
-			return;
+		} catch (final ArrayIndexOutOfBoundsException be) {
+			System.err.println(usageString);
+		} catch (final UnknownHostException uhe) {
+			System.err.println("Unknown host: " + uhe.getMessage());
+		} catch (final NumberFormatException nfe) {
+			System.err.println(usageString);
+		} catch (Exception e) {
+			System.err.println(usageString);
 		}
-		
-	  try {
-		  	System.out.println("Connecting to: " + gameServerIp + ":" + gameServerPort);
-			IComm comm = new DaideComm(gameServerIp, gameServerPort, name);
-			SagBot sagBot = new SagBot(negoServerIp, negoServerPort);
-			sagBot.start(comm);
-	  } catch (CommException e) {
-	  	System.err.println("Cannot connect to the server.");
-	  }
 	}
 }
