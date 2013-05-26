@@ -10,7 +10,7 @@ public class TrustUpdates {
 	public int alliedAgainstUs = -50;
 	public int alliedAgainstOurAlly = -10;
 	
-	public int militarisedBorder = 10;
+	public int militarisedBorder = -10;
 	public int refusedDemilitariseBorder = -10;
 	
 	public int refusedInformationalQuestion = -5;
