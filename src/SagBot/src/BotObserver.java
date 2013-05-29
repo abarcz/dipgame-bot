@@ -1,3 +1,5 @@
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 
@@ -7,6 +9,10 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
+import java.util.HashMap;
+import java.util.Observable;
+import java.util.Observer;
+
 
 /**
  * GUI to observe the bot's internals : relations etc
@@ -14,37 +20,57 @@ import javax.swing.JTabbedPane;
  * @author alex
  *
  */
-public class BotObserver {
-	public BotObserver () {
+public class BotObserver implements Observer {
+	
+	private final String powerName;
+	private final JTabbedPane tabbedPane;
+	private HashMap<String, PowerInfoPane> powerInfoPanes;
+
+	public BotObserver(KnowledgeBase base) {
 		JFrame frame = new JFrame("BotObserver");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		powerInfoPanes = new HashMap<String, PowerInfoPane>();
 		
-		JTabbedPane tabbedPane = new JTabbedPane();
+		tabbedPane = new JTabbedPane();
 		tabbedPane.setPreferredSize(new Dimension(800, 400));
-		JComponent panel1 = makeTextPanel("Panel #1");
-		tabbedPane.addTab("Tab 1", panel1);
+
+		powerName = base.getPowerName();
+		PowerInfoPane panel1 = new PowerInfoPane(powerName);
+		tabbedPane.addTab(panel1.getName(), panel1);
+		powerInfoPanes.put(powerName, panel1);
 		
-		frame.getContentPane().add(tabbedPane);
+		for (String name : base.otherPowerNames) {
+			PowerInfoPane panel = new PowerInfoPane(name);
+			tabbedPane.addTab(panel.getName(), panel);
+			powerInfoPanes.put(panel.getName(), panel);
+			System.out.println("added pane " + panel.getName());
+		}
 		
-		
+		frame.getContentPane().add(tabbedPane);		
 		frame.pack();
 		frame.setVisible(true);
 	}
 	
+	@Override
+	public void update(Observable object, Object param) {
+		if (object instanceof KnowledgeBase) {
+			KnowledgeBase base = (KnowledgeBase) object;
+			for (String name : base.otherPowerNames) {
+				PowerInfoPane pane = powerInfoPanes.get(name);
+				PowerKnowledgeBase powerBase = base.getPowerKnowledge(name);
+				pane.updateFrom(powerBase);
+			}
+			PowerInfoPane pane = powerInfoPanes.get(powerName);
+			pane.updateFrom(base);
+		}
+	}
+	
 	protected JComponent makePowerPanel(String powerName) {
 		JTabbedPane tabbedPane = new JTabbedPane();
-		JComponent panel1 = makeTextPanel("Panel #1");
-		tabbedPane.addTab("Tab 1", panel1);
+		JComponent panel1 = new TextPane("AAA");
+		tabbedPane.addTab("Treaties", panel1);
+		tabbedPane.addTab("Provinces", panel1);
+		tabbedPane.addTab("Units", panel1);
 		return tabbedPane;
 	}
-
-	protected JComponent makeTextPanel(String text) {
-        JPanel panel = new JPanel(false);
-        JLabel filler = new JLabel(text);
-        filler.setHorizontalAlignment(JLabel.CENTER);
-        panel.setLayout(new GridLayout(1, 1));
-        panel.add(filler);
-        return panel;
-    }
-
 }

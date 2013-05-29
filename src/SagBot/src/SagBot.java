@@ -45,8 +45,7 @@ public class SagBot extends Bot {
 		super(new SagProvinceEvaluator(), new SagOrderEvaluator(), new SagOptionEvaluator());
 		this.negotiationServer = negotiationIp;
 		this.negotiationPort = negotiationPort;
-		this.debugMode = false;
-		this.botObserver = new BotObserver();
+		this.debugMode = true;
 	}
 
 	public void setDebug(boolean debugMode) {
@@ -83,7 +82,7 @@ public class SagBot extends Bot {
 		powerName = getMe().getName();
 		System.out.println("We are " + powerName);
 		
-		knowledgeBase = new KnowledgeBase(powerName);
+		knowledgeBase = new KnowledgeBase(powerName, game);
 		
 		negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
 		negotiator.init();
@@ -92,6 +91,9 @@ public class SagBot extends Bot {
 		((SagOrderEvaluator) this.orderEvaluator).setKnowledgeBase(knowledgeBase);
 		((SagOptionEvaluator) this.optionEvaluator).setKnowledgeBase(knowledgeBase);
 		((SagProvinceEvaluator) this.provinceEvaluator).setKnowledgeBase(knowledgeBase);
+		
+		botObserver = new BotObserver(knowledgeBase);
+		knowledgeBase.addObserver(botObserver);
 	}
 	
 	public HashMap<String, String> getRegionControllers() {

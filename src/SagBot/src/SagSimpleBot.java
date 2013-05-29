@@ -33,7 +33,7 @@ public class SagSimpleBot extends Player {
 		this.negoServerIp = negoServerIp;
 		this.negoServerPort = negoServerPort;
 		this.debugMode = false;
-		this.botObserver = new BotObserver();
+		this.botObserver = new BotObserver(new KnowledgeBase("aaa", game));
 	}
 
 	public void setDebug(boolean debugMode) {
