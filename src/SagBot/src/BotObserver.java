@@ -1,8 +1,14 @@
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 
+import javax.swing.BoxLayout;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -20,11 +26,12 @@ import java.util.Observer;
  * @author alex
  *
  */
-public class BotObserver implements Observer {
+public class BotObserver implements Observer, ItemListener {
 	
 	private final String powerName;
 	private final JTabbedPane tabbedPane;
 	private HashMap<String, PowerInfoPane> powerInfoPanes;
+	private final JCheckBox stepwiseCheckBox;
 
 	public BotObserver(KnowledgeBase base) {
 		JFrame frame = new JFrame("BotObserver");
@@ -46,9 +53,26 @@ public class BotObserver implements Observer {
 			System.out.println("added pane " + panel.getName());
 		}
 		
-		frame.getContentPane().add(tabbedPane);		
+		JPanel controlPane = new JPanel();
+		controlPane.add(new JLabel("Auto mode (if not, stepwise): "));
+		stepwiseCheckBox = new JCheckBox();
+		stepwiseCheckBox.addItemListener(this);
+		controlPane.add(stepwiseCheckBox);
+		//controlPane.add(new JLabel("Next step: "));
+		
+		frame.getContentPane().setLayout(new GridBagLayout());
+		GridBagConstraints c = new GridBagConstraints();
+		c.gridx = 0;
+		c.gridx = 0;
+		frame.getContentPane().add(controlPane, c);
+		c.gridheight = 10;
+		frame.getContentPane().add(tabbedPane, c);
 		frame.pack();
 		frame.setVisible(true);
+	}
+	
+	public boolean getAutoMode() {
+		return !stepwiseCheckBox.isSelected();
 	}
 	
 	@Override
@@ -72,5 +96,13 @@ public class BotObserver implements Observer {
 		tabbedPane.addTab("Provinces", panel1);
 		tabbedPane.addTab("Units", panel1);
 		return tabbedPane;
+	}
+
+	@Override
+	public void itemStateChanged(ItemEvent event) {
+		Object source = event.getItemSelectable();
+	    if (source == stepwiseCheckBox) {
+	    	
+	    }
 	}
 }

@@ -33,7 +33,6 @@ public class SagBot extends Bot {
 	
 	private static String name = "SagBot";
 	protected Random rand;
-	private boolean debugMode;
 	private BotObserver botObserver;
 	private String powerName;
 	private KnowledgeBase knowledgeBase;
@@ -45,12 +44,6 @@ public class SagBot extends Bot {
 		super(new SagProvinceEvaluator(), new SagOrderEvaluator(), new SagOptionEvaluator());
 		this.negotiationServer = negotiationIp;
 		this.negotiationPort = negotiationPort;
-		this.debugMode = true;
-	}
-
-	public void setDebug(boolean debugMode) {
-		this.debugMode = debugMode;
-		System.out.println("Setting debug mode to: " + debugMode);
 	}
 
 	@Override
@@ -156,15 +149,12 @@ public class SagBot extends Bot {
 	 * Selects the orders to send from the preselected ones that are stored in optionBoard
 	 */
 	protected List<Order> selectOption(OptionBoard optionBoard) {
-		if (this.debugMode) {
-			System.out.println("starting round. press Enter to continue or type 'auto' to go on without prompting..");
+		if (this.botObserver.getAutoMode()) {
+			System.out.println("starting round. press Enter to continue");
 			BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 			String command;
 			try {
 				command = reader.readLine();
-				if (command.equals("auto")) {
-					setDebug(false);
-				}
 			} catch (IOException ioe) {
 				System.out.println("IO error waiting for enter!");
 			}
@@ -192,7 +182,7 @@ public class SagBot extends Bot {
 	 */
 	public static void main(String[] args) {
 		SagBot sagBot = null;
-		String usageString = "Usage:\n  " + name + " <ip> <port> <name>  <negotiation ip> <negotiation port> (<debug>)";
+		String usageString = "Usage:\n  " + name + " <ip> <port> <name>  <negotiation ip> <negotiation port>";
 		try {
 			if (args.length == 0) {
 				InetAddress negoServerIp;
@@ -210,9 +200,6 @@ public class SagBot extends Bot {
 				sagBot.start(comm);
 			}  else if (args.length >= 5) {
 				sagBot = new SagBot(InetAddress.getByName(args[3]), Integer.parseInt(args[4]));
-				if (args.length == 6) {
-					sagBot.setDebug(Boolean.valueOf(args[5]));
-				}
 				IComm comm = new DaideComm(InetAddress.getByName(args[0]), Integer.parseInt(args[1]), name + "(" + args[2] + ")");
 				sagBot.start(comm);
 			} else {

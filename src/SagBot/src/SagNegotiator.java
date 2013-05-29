@@ -98,6 +98,7 @@ public class SagNegotiator implements Negotiator{
 				if (illocution instanceof Propose) {
 					Deal deal = ((Propose)illocution).getDeal();
 					if (deal instanceof Agree) {
+						String dealMakerName = ((Agree) deal).getPowers().get(0).getName();
 						Offer offer = ((Agree)deal).getOffer();
 						Vector<Power> too = null;
 						Illocution response = null;
@@ -107,6 +108,7 @@ public class SagNegotiator implements Negotiator{
 							too.add(illocution.getSender());
 							if(rand.nextBoolean()){
 								response = new Accept(player.getMe(), too, deal);
+								knowledgeBase.addPeace(too.get(0).getName());
 							}else{
 								response = new Reject(player.getMe(), too, deal);
 							}
@@ -114,8 +116,14 @@ public class SagNegotiator implements Negotiator{
 						case ALLIANCE:
 							too = new Vector<Power>(1);
 							too.add(illocution.getSender());
+							Alliance alliance = (Alliance) ((Agree) deal).getOffer();
+							alliance.getEnemyPowers();
 							if(rand.nextBoolean()){
 								response = new Accept(player.getMe(), too, deal);
+								for (Power power : alliance.getEnemyPowers()) {
+									String enemy = power.getName();
+									knowledgeBase.addAlliance(too.get(0).getName(), enemy);
+								}
 							}else{
 								response = new Reject(player.getMe(), too, deal);
 							}
@@ -125,7 +133,6 @@ public class SagNegotiator implements Negotiator{
 						// We have a new diplomaticAction to be performed
 						if (response != null) {
 							sendDialecticalAction(response);
-							//TODO update knowledge base
 						}
 					}
 				}
