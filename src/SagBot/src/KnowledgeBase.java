@@ -59,7 +59,7 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		}
 	}
 	
-	protected void stateChanged() {
+	public void stateChanged() {
 		this.setChanged();
 		this.notifyObservers();
 	}

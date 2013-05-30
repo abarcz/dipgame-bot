@@ -2,6 +2,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.Semaphore;
 import java.io.*;
 
 import es.csic.iiia.fabregues.dip.Player;
@@ -33,7 +34,7 @@ public class SagSimpleBot extends Player {
 		this.negoServerIp = negoServerIp;
 		this.negoServerPort = negoServerPort;
 		this.debugMode = false;
-		this.botObserver = new BotObserver(new KnowledgeBase("aaa", game));
+		this.botObserver = new BotObserver(new KnowledgeBase("aaa", game), new Semaphore(0));
 	}
 
 	public void setDebug(boolean debugMode) {

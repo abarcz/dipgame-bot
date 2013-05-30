@@ -58,7 +58,7 @@ public class PowerStatsPane extends JPanel {
 	protected void updatePeaceTreaties(PowerKnowledgeBase base) {
 		HashSet<String> powerNames = base.getOtherPowerNames();
 		HashMap<String, Set<String>> alliances = base.getAlliances();
-		Set<String> peaceTreaties = base.getPeaceTreaties();
+		Set<String> wars = base.getWars();
 		
 		treatiesPane.clear();
 		for (String name : powerNames) {
@@ -72,8 +72,8 @@ public class PowerStatsPane extends JPanel {
 					treatiesPane.append(allianceInfo);
 				}
 			}
-			if (peaceTreaties.contains(name)) {
-				treatiesPane.append(name + " peace treaty");
+			if (wars.contains(name)) {
+				treatiesPane.append(name + " war");
 			}
 		}
 	}

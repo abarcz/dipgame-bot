@@ -17,12 +17,16 @@ public class PowerKnowledgeBase extends Observable {
 	
 	public PowerKnowledgeBase(String powerName, Power power) {
 		this.alliances = new HashMap<String, Set<String>>();
-		this.peaceTreaties = new HashSet<String>();
 		
 		this.otherPowerNames = new HashSet<String>(Arrays.asList("AUS", "ENG",
 				"FRA","GER", "ITA", "RUS", "TUR"));
 		this.otherPowerNames.remove(powerName);
 		assert(!otherPowerNames.contains(powerName));
+		
+		this.peaceTreaties = new HashSet<String>();
+		for (String currPowerName : otherPowerNames) {
+			peaceTreaties.add(currPowerName);
+		}
 		
 		for (String name: this.otherPowerNames) {
 			alliances.put(name, new HashSet<String>());
@@ -43,8 +47,14 @@ public class PowerKnowledgeBase extends Observable {
 		return otherPowerNames;
 	}
 	
-	public Set<String> getPeaceTreaties() {
-		return peaceTreaties;
+	public Set<String> getWars() {
+		HashSet<String> wars = new HashSet<String>();
+		for (String power : otherPowerNames) {
+			if (!peaceTreaties.contains(power)) {
+				wars.add(power);
+			}
+		}
+		return wars;
 	}
 	
 	public Set<String> getAllies() {
@@ -70,6 +80,7 @@ public class PowerKnowledgeBase extends Observable {
 		assert(otherPowerNames.contains(ally));
 		assert(otherPowerNames.contains(enemy));
 		this.alliances.get(ally).add(enemy);
+		addPeace(ally);	// alliance means peace
 	}
 	
 	public void addAggression(String enemy) {

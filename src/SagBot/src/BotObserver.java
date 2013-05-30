@@ -4,8 +4,11 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -28,7 +31,7 @@ import java.util.concurrent.Semaphore;
  * @author alex
  *
  */
-public class BotObserver implements Observer, ItemListener {
+public class BotObserver implements Observer, ItemListener, ActionListener {
 	
 	private final String powerName;
 	private final JTabbedPane tabbedPane;
@@ -36,6 +39,7 @@ public class BotObserver implements Observer, ItemListener {
 	private final JCheckBox stepwiseCheckBox;
 	private final JButton nextStepButton;
 	private final Semaphore nextStepSemaphore;
+	private final JLabel nextStepLabel;
 
 	public BotObserver(KnowledgeBase base, Semaphore nextStep) {
 		this.nextStepSemaphore = nextStep;
@@ -64,9 +68,12 @@ public class BotObserver implements Observer, ItemListener {
 		stepwiseCheckBox.addItemListener(this);
 		controlPane.add(stepwiseCheckBox);
 		nextStepButton = new JButton("Next step");
-		nextStepButton.setEnabled(false);
-		nextStepButton.addItemListener(this);
+		nextStepButton.setActionCommand("step");
+		nextStepButton.addActionListener(this);
+		nextStepButton.setMnemonic(KeyEvent.VK_X);
 		controlPane.add(nextStepButton);
+		nextStepLabel = new JLabel("click button (Alt+x) to continue..");
+		controlPane.add(nextStepLabel);
 		
 		frame.getContentPane().setLayout(new GridBagLayout());
 		GridBagConstraints c = new GridBagConstraints();
@@ -96,26 +103,19 @@ public class BotObserver implements Observer, ItemListener {
 			pane.updateFrom(base);
 		}
 	}
-	
-	protected JComponent makePowerPanel(String powerName) {
-		JTabbedPane tabbedPane = new JTabbedPane();
-		JComponent panel1 = new TextPane("AAA");
-		tabbedPane.addTab("Treaties", panel1);
-		tabbedPane.addTab("Provinces", panel1);
-		tabbedPane.addTab("Units", panel1);
-		return tabbedPane;
-	}
 
 	@Override
 	public void itemStateChanged(ItemEvent event) {
 		Object source = event.getItemSelectable();
-	    if (source == nextStepButton) {
-	    	nextStepSemaphore.release();
-	    	nextStepButton.setEnabled(false);
-	    }
+
 	}
-	
-	public void enableNextStepButton() {
-		nextStepButton.setEnabled(true);
+
+	@Override
+	public void actionPerformed(ActionEvent event) {
+		if ("step".equals(event.getActionCommand())) {
+			if (nextStepSemaphore.availablePermits() <= 0) {
+				nextStepSemaphore.release();
+			}
+	    }
 	}
 }

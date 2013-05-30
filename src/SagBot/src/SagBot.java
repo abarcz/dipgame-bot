@@ -1,8 +1,5 @@
 
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -46,6 +43,7 @@ public class SagBot extends Bot {
 		super(new SagProvinceEvaluator(), new SagOrderEvaluator(), new SagOptionEvaluator());
 		this.negotiationServer = negotiationIp;
 		this.negotiationPort = negotiationPort;
+		this.nextStepSemaphore = new Semaphore(0);
 	}
 
 	@Override
@@ -89,6 +87,7 @@ public class SagBot extends Bot {
 		
 		botObserver = new BotObserver(knowledgeBase, nextStepSemaphore);
 		knowledgeBase.addObserver(botObserver);
+		knowledgeBase.stateChanged();
 	}
 	
 	public HashMap<String, String> getRegionControllers() {
@@ -153,7 +152,6 @@ public class SagBot extends Bot {
 	protected List<Order> selectOption(OptionBoard optionBoard) {
 		if (this.botObserver.getAutoMode()) {
 			System.out.println("starting round... waiting for GUI nextStep");
-			botObserver.enableNextStepButton();
 			try {
 				nextStepSemaphore.acquire();
 			} catch (InterruptedException e) {
