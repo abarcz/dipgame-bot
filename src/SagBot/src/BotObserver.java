@@ -8,6 +8,7 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -18,6 +19,7 @@ import javax.swing.JTabbedPane;
 import java.util.HashMap;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.concurrent.Semaphore;
 
 
 /**
@@ -32,8 +34,11 @@ public class BotObserver implements Observer, ItemListener {
 	private final JTabbedPane tabbedPane;
 	private HashMap<String, PowerInfoPane> powerInfoPanes;
 	private final JCheckBox stepwiseCheckBox;
+	private final JButton nextStepButton;
+	private final Semaphore nextStepSemaphore;
 
-	public BotObserver(KnowledgeBase base) {
+	public BotObserver(KnowledgeBase base, Semaphore nextStep) {
+		this.nextStepSemaphore = nextStep;
 		JFrame frame = new JFrame("BotObserver");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		powerInfoPanes = new HashMap<String, PowerInfoPane>();
@@ -58,7 +63,10 @@ public class BotObserver implements Observer, ItemListener {
 		stepwiseCheckBox = new JCheckBox();
 		stepwiseCheckBox.addItemListener(this);
 		controlPane.add(stepwiseCheckBox);
-		//controlPane.add(new JLabel("Next step: "));
+		nextStepButton = new JButton("Next step");
+		nextStepButton.setEnabled(false);
+		nextStepButton.addItemListener(this);
+		controlPane.add(nextStepButton);
 		
 		frame.getContentPane().setLayout(new GridBagLayout());
 		GridBagConstraints c = new GridBagConstraints();
@@ -101,8 +109,13 @@ public class BotObserver implements Observer, ItemListener {
 	@Override
 	public void itemStateChanged(ItemEvent event) {
 		Object source = event.getItemSelectable();
-	    if (source == stepwiseCheckBox) {
-	    	
+	    if (source == nextStepButton) {
+	    	nextStepSemaphore.release();
+	    	nextStepButton.setEnabled(false);
 	    }
+	}
+	
+	public void enableNextStepButton() {
+		nextStepButton.setEnabled(true);
 	}
 }

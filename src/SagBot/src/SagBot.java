@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.Semaphore;
 
 import es.csic.iiia.fabregues.bot.Bot;
 import es.csic.iiia.fabregues.bot.options.Option;
@@ -36,6 +37,7 @@ public class SagBot extends Bot {
 	private BotObserver botObserver;
 	private String powerName;
 	private KnowledgeBase knowledgeBase;
+	private Semaphore nextStepSemaphore;
 	
 	/**
 	 *
@@ -85,7 +87,7 @@ public class SagBot extends Bot {
 		((SagOptionEvaluator) this.optionEvaluator).setKnowledgeBase(knowledgeBase);
 		((SagProvinceEvaluator) this.provinceEvaluator).setKnowledgeBase(knowledgeBase);
 		
-		botObserver = new BotObserver(knowledgeBase);
+		botObserver = new BotObserver(knowledgeBase, nextStepSemaphore);
 		knowledgeBase.addObserver(botObserver);
 	}
 	
@@ -150,13 +152,13 @@ public class SagBot extends Bot {
 	 */
 	protected List<Order> selectOption(OptionBoard optionBoard) {
 		if (this.botObserver.getAutoMode()) {
-			System.out.println("starting round. press Enter to continue");
-			BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-			String command;
+			System.out.println("starting round... waiting for GUI nextStep");
+			botObserver.enableNextStepButton();
 			try {
-				command = reader.readLine();
-			} catch (IOException ioe) {
-				System.out.println("IO error waiting for enter!");
+				nextStepSemaphore.acquire();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 
