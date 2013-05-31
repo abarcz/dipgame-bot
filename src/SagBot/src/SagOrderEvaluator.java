@@ -4,6 +4,7 @@ import es.csic.iiia.fabregues.dip.board.Power;
 import es.csic.iiia.fabregues.dip.orders.MTOOrder;
 import es.csic.iiia.fabregues.dip.orders.Order;
 import es.csic.iiia.fabregues.dip.orders.SUPMTOOrder;
+import es.csic.iiia.fabregues.dip.orders.WVEOrder;
 
 public class SagOrderEvaluator implements OrderEvaluator{
 	private KnowledgeBase knowledgeBase;
@@ -25,6 +26,9 @@ public class SagOrderEvaluator implements OrderEvaluator{
 		}
 		else if (order instanceof SUPMTOOrder) {
 			order.setOrderValue(((SUPMTOOrder) order).getDestination().getValue());
+		}
+		else if (order instanceof WVEOrder) {
+			order.setOrderValue(-200.0f);
 		}
 		else {
 			order.setOrderValue(order.getLocation().getProvince().getValue());

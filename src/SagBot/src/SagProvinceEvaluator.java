@@ -25,7 +25,7 @@ public class SagProvinceEvaluator implements ProvinceEvaluator{
 			if (province.isSC()) province.setValue(MAX_VALUE);
 			else {
 				for (Province p : game.getAdjacentProvinces(province)) {
-					if (p.isSC() && !game.getOwner(p).equals(power)) {
+					if (p.isSC() && game.getOwner(p) != null && game.getOwner(p).equals(power)) {
 						province.setValue(province.getValue() + 10.0f);
 					}
 				}
