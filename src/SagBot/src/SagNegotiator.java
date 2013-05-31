@@ -31,7 +31,7 @@ import es.csic.iiia.fabregues.utilities.Log;
 public class SagNegotiator implements Negotiator{
 	
 	private Player player;
-	private Log log;
+	private Log dipLog;
 	
 	//Negotiation variables
 	private int negotiationPort;
@@ -39,6 +39,7 @@ public class SagNegotiator implements Negotiator{
 	private DipNegoClient chat;
 	private Random rand;
 	private KnowledgeBase knowledgeBase;
+	private BotObserver observer;
 	
 	private boolean occupied;
 	
@@ -46,7 +47,7 @@ public class SagNegotiator implements Negotiator{
 		this.negotiationServer = negotiationIp;
 		this.negotiationPort = negotiationPort;
 		this.player = player;
-		this.log = player.log.getLog();
+		this.dipLog = player.log.getLog();
 		//this.log = new Interface(name+"_"+System.currentTimeMillis());
 		this.rand = new Random(System.currentTimeMillis());
 		occupied = false;
@@ -54,6 +55,14 @@ public class SagNegotiator implements Negotiator{
 
 	public void setKnowledgeBase(KnowledgeBase base) {
 		this.knowledgeBase = base;
+	}
+	
+	public void setGuiObserver(BotObserver observer) {
+		this.observer = observer;
+	}
+	
+	protected void log(String string) {
+		observer.log(string);
 	}
 	
 	/**
@@ -98,7 +107,6 @@ public class SagNegotiator implements Negotiator{
 				if (illocution instanceof Propose) {
 					Deal deal = ((Propose)illocution).getDeal();
 					if (deal instanceof Agree) {
-						String dealMakerName = ((Agree) deal).getPowers().get(0).getName();
 						Offer offer = ((Agree)deal).getOffer();
 						Vector<Power> too = null;
 						Illocution response = null;
@@ -106,26 +114,38 @@ public class SagNegotiator implements Negotiator{
 						case PEACE:
 							too = new Vector<Power>(1);
 							too.add(illocution.getSender());
+							String powerName = too.get(0).getName();
 							if(rand.nextBoolean()){
 								response = new Accept(player.getMe(), too, deal);
-								knowledgeBase.addPeace(too.get(0).getName());
+								knowledgeBase.addPeace(powerName);
+								log("accepted peace with " + powerName);
 							}else{
 								response = new Reject(player.getMe(), too, deal);
+								log("rejected peace with " + powerName);
 							}
 							break;
 						case ALLIANCE:
 							too = new Vector<Power>(1);
 							too.add(illocution.getSender());
 							Alliance alliance = (Alliance) ((Agree) deal).getOffer();
-							alliance.getEnemyPowers();
+							String ally = too.get(0).getName();
 							if(rand.nextBoolean()){
 								response = new Accept(player.getMe(), too, deal);
+								String logString = "accepted alliance with " + ally + " against ";
 								for (Power power : alliance.getEnemyPowers()) {
 									String enemy = power.getName();
-									knowledgeBase.addAlliance(too.get(0).getName(), enemy);
+									knowledgeBase.addAlliance(ally, enemy);
+									logString += enemy + ", ";
 								}
+								log(logString);
 							}else{
 								response = new Reject(player.getMe(), too, deal);
+								String logString = "rejected alliance with " + ally + " against ";
+								for (Power power : alliance.getEnemyPowers()) {
+									String enemy = power.getName();
+									logString += enemy + ", ";
+								}
+								log(logString);
 							}
 							break;
 						}
@@ -146,7 +166,7 @@ public class SagNegotiator implements Negotiator{
 				
 			}
 		};
-		chat = new DipNegoClientImpl(negotiationServer, negotiationPort, player.getMe().getName(), handler, log);
+		chat = new DipNegoClientImpl(negotiationServer, negotiationPort, player.getMe().getName(), handler, dipLog);
 		try {
 			chat.init();
 		} catch (IOException e1) {
@@ -155,7 +175,7 @@ public class SagNegotiator implements Negotiator{
 			e1.printStackTrace();
 		}
 		
-		log.print("Negotiation module initiated.");
+		dipLog.print("Negotiation module initiated.");
 	}
 	
 	/**

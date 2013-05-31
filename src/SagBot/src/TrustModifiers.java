@@ -1,6 +1,6 @@
 
 /** structure holding trust updates applicable to different situations */
-public class TrustUpdates {
+public class TrustModifiers {
 	public int aggression = -100;
 	public int aggressedOurAlly = -20;
 	public int peace = 10;

@@ -61,33 +61,39 @@ public class SagBot extends Bot {
 	protected int getNumberOfBestOrdersPerUnit() {
 		return 2;
 	}
+	
+	protected void log(String string) {
+		botObserver.log(string);
+	}
 
 	@Override
 	public void init() {
-		System.out.println("Initializing..");
 		rand = new Random(System.currentTimeMillis());
-		System.out.println("Map " + mapName);
 	}
 	
 	@Override
 	public void start() {
-		System.out.println("Starting game..");
 		powerName = getMe().getName();
-		System.out.println("We are " + powerName);
-		
 		knowledgeBase = new KnowledgeBase(powerName, game);
-		
-		negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
-		negotiator.init();
-		negotiator.setKnowledgeBase(knowledgeBase);
-		
-		((SagOrderEvaluator) this.orderEvaluator).setKnowledgeBase(knowledgeBase);
-		((SagOptionEvaluator) this.optionEvaluator).setKnowledgeBase(knowledgeBase);
-		((SagProvinceEvaluator) this.provinceEvaluator).setKnowledgeBase(knowledgeBase);
 		
 		botObserver = new BotObserver(knowledgeBase, nextStepSemaphore);
 		knowledgeBase.addObserver(botObserver);
 		knowledgeBase.stateChanged();
+
+		log("We are " + powerName);
+		log("Map " + mapName);
+		log("'->' stands for attack (agressor -> victim)");
+		log("\n");
+		
+		negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
+		negotiator.init();
+		negotiator.setKnowledgeBase(knowledgeBase);
+		negotiator.setGuiObserver(botObserver);
+		
+		((SagOrderEvaluator) this.orderEvaluator).setKnowledgeBase(knowledgeBase);
+		((SagOptionEvaluator) this.optionEvaluator).setKnowledgeBase(knowledgeBase);
+		((SagProvinceEvaluator) this.provinceEvaluator).setKnowledgeBase(knowledgeBase);
+
 	}
 	
 	public HashMap<String, String> getRegionControllers() {
@@ -115,7 +121,7 @@ public class SagBot extends Bot {
 	 * Receive all orders made by all players, including myself
 	 */
 	public void receivedOrder(Order order) {
-		//System.out.println("receivedOrder: " + order.toString());
+		//log("receivedOrder: " + order.toString());
 		HashMap<String, String> controllers = getRegionControllers();
 		HashMap<String, String> owners = getScOwners();
 		
@@ -141,7 +147,15 @@ public class SagBot extends Bot {
 	}
 	
 	public void addAggression(String aggressor, String victim) {
-		System.out.println(victim + " is under attack of " + aggressor);
+		String string = aggressor + " -> " + victim;	
+		if (!knowledgeBase.getPowerKnowledge(aggressor).getWars().contains(victim)) {
+			string += ", declaring war";
+		}
+		
+		if (knowledgeBase.getPowerKnowledge(aggressor).getAllies().contains(victim)) {
+			string += ", breaking alliance";
+		}
+		log(string);
 		this.knowledgeBase.addAggression(aggressor, victim);
 	}
 
@@ -151,7 +165,7 @@ public class SagBot extends Bot {
 	 */
 	protected List<Order> selectOption(OptionBoard optionBoard) {
 		if (this.botObserver.getAutoMode()) {
-			System.out.println("starting round... waiting for GUI nextStep");
+			botObserver.log("starting round... waiting for GUI nextStep");
 			try {
 				nextStepSemaphore.acquire();
 			} catch (InterruptedException e) {
@@ -166,6 +180,14 @@ public class SagBot extends Bot {
 			return optionBoard.getSelectedOrders();
 		}
 		return new Vector<Order>(0);
+	}
+	
+	/**
+	 * Informs about the winner of the game and exits
+	 */
+	@Override
+	public void handleSlo(String winner) {
+		botObserver.powerWon(winner);
 	}
 	
 	public void exit(){

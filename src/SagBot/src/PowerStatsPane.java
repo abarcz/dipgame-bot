@@ -1,13 +1,10 @@
 import java.awt.Color;
 import java.awt.GridLayout;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.Vector;
 
 import javax.swing.JPanel;
-
-import es.csic.iiia.fabregues.dip.board.Province;
-import es.csic.iiia.fabregues.dip.board.Region;
 
 
 /**
@@ -26,11 +23,10 @@ public class PowerStatsPane extends JPanel {
 	private TextPane treatiesPane;
 	private TextPane provincesPane;
 	private TextPane unitsPane;
-	private final int PANES_NUM = 3;
 	
-	public PowerStatsPane() {
+	public PowerStatsPane(String powerName) {
 		super();
-		this.setName("PowerInfo");
+		this.setName(powerName);
 		
 		treatiesPane = new TextPane("treaties");
 		treatiesPane.setColor(Color.white);
@@ -41,7 +37,7 @@ public class PowerStatsPane extends JPanel {
 		unitsPane = new TextPane("units");
 		unitsPane.setColor(Color.white);
 		
-		GridLayout layout = new GridLayout(1, PANES_NUM);
+		GridLayout layout = new GridLayout(1, 0);
 		layout.setHgap(5);
 		this.setLayout(layout);
 		this.add(treatiesPane);
@@ -56,7 +52,7 @@ public class PowerStatsPane extends JPanel {
 	}
 	
 	protected void updatePeaceTreaties(PowerKnowledgeBase base) {
-		HashSet<String> powerNames = base.getOtherPowerNames();
+		Vector<String> powerNames = base.getOtherPowerNames();
 		HashMap<String, Set<String>> alliances = base.getAlliances();
 		Set<String> wars = base.getWars();
 		
@@ -80,15 +76,25 @@ public class PowerStatsPane extends JPanel {
 	
 	protected void updateProvinces(PowerKnowledgeBase base) {
 		provincesPane.clear();
-		for (Province supplyCenter: base.getPower().getOwnedSCs()) {
-			provincesPane.append(supplyCenter.getName());
+		Vector<String> homes = base.getHomes();
+		Vector<String> centers = base.getSupplyCenters();
+		// print controlled homes first
+		for (String province : homes) {
+			if (centers.contains(province)) {
+				provincesPane.append(province + " (home)");
+			}
+		}
+		for (String province : centers) {
+			if (!homes.contains(province)){
+				provincesPane.append(province);
+			}
 		}
 	}
 	
 	protected void updateUnits(PowerKnowledgeBase base) {
 		unitsPane.clear();
-		for (Region region : base.getPower().getControlledRegions()) {
-			unitsPane.append(region.getName());
+		for (String region : base.getRegions()) {
+			unitsPane.append(region);
 		}
 	}
 }

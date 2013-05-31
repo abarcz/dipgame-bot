@@ -319,15 +319,11 @@ public class ConsolePlayerPro extends Player {
 		ConsolePlayerPro con = null;
 		try {
 			if (args.length == 0) {
-				InetAddress negoServerIp;
-				int negoServerPort;
 				InetAddress gameServerIp;
 				int gameServerPort;
 				String name;
 				gameServerIp = InetAddress.getLocalHost();
 				gameServerPort = 16713;
-				negoServerIp = InetAddress.getLocalHost();
-				negoServerPort = 16714;
 				name = "ConsolePlayer";
 				System.out.println("Console player connecting to: " + gameServerIp + ":" + gameServerPort);
 				IComm comm = new DaideComm(gameServerIp, gameServerPort, name);

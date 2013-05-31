@@ -1,6 +1,12 @@
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
 
 import es.csic.iiia.fabregues.dip.board.Game;
 
@@ -11,9 +17,27 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	protected HashMap<String, Integer> strength;	/**< how strong we believe a power to be? */
 	protected HashMap<String, PowerKnowledgeBase> powers;	/** knowledge about other powers knowledge */
 	
-	protected final TrustUpdates trustUpdates;	/** event->trust update */
+	protected final TrustModifiers trustModifiers;	/** event->trust update */
+	protected final StrengthModifiers strengthModifiers; /** event->strength modifier */
 	protected final int MAX_TRUST = 200;
 	protected final int MIN_TRUST = -200;
+	
+	public static Map<String, Integer> sortByValue(Map<String, Integer> map) {
+        List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(map.entrySet());
+
+        Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
+
+            public int compare(Map.Entry<String, Integer> m1, Map.Entry<String, Integer> m2) {
+                return (m2.getValue()).compareTo(m1.getValue());
+            }
+        });
+
+        Map<String, Integer> result = new LinkedHashMap<String, Integer>();
+        for (Map.Entry<String, Integer> entry : list) {
+            result.put(entry.getKey(), entry.getValue());
+        }
+        return result;
+    }
 	
 	
 	public KnowledgeBase(String powerName, Game game) {
@@ -25,7 +49,8 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 			powers.put(power, new PowerKnowledgeBase(power, game.getPower(power)));
 			trust.put(power, 0);
 		}
-		trustUpdates = new TrustUpdates();
+		trustModifiers = new TrustModifiers();
+		strengthModifiers = new StrengthModifiers();
 		recalculateStrengths();
 	}
 	
@@ -42,24 +67,51 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	}
 
 	public final PowerKnowledgeBase getPowerKnowledge(String power) {
-		return powers.get(power);
+		if (power.equals(this.powerName)) {
+			return this;
+		} else {
+			return powers.get(power);
+		}
 	}
 	
 	public int getTrust(String power) {
 		return trust.get(power);
 	}
 	
+	public Map<String, Integer> getSortedTrust() {
+		return sortByValue(trust);
+	}
+	
 	public int getStrength(String power) {
 		return strength.get(power);
 	}
 	
+	public Map<String, Integer> getSortedStrength() {
+		return sortByValue(strength);
+	}
+	
 	public void recalculateStrengths() {
-		for (String power : this.otherPowerNames) {
-			strength.put(power, 0);
+		for (String powerName : this.allPowerNames) {
+			PowerKnowledgeBase power = getPowerKnowledge(powerName);
+			Vector<String> supplyCenters = power.getSupplyCenters();
+			Vector<String> homes = power.getHomes();
+			int powerStrength = 0;
+			// include owned supply centers
+			powerStrength += supplyCenters.size() * strengthModifiers.ownedSupplyCenter;
+			// include owned homes
+			for (String home : homes) {
+				if (supplyCenters.contains(home)) {
+					powerStrength += strengthModifiers.ownedSupplyCenterIsHome;
+				}
+			}
+			// include controlled units (number may be different than number of SCs)
+			powerStrength += power.getRegions().size() * strengthModifiers.ownedUnit;
+			strength.put(powerName, powerStrength);
 		}
 	}
 	
 	public void stateChanged() {
+		recalculateStrengths();
 		this.setChanged();
 		this.notifyObservers();
 	}
@@ -67,7 +119,7 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	@Override
 	public void addPeace(String power) {
 		super.addPeace(power);
-		updateTrust(power, trustUpdates.peace);
+		updateTrust(power, trustModifiers.peace);
 		stateChanged();
 	}
 	
@@ -87,7 +139,7 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	public void addAlliance(String ally, String enemy) {
 		super.addAlliance(ally, enemy);
 		powers.get(ally).addAlliance(powerName, enemy);
-		updateTrust(ally, trustUpdates.alliance);
+		updateTrust(ally, trustModifiers.alliance);
 		stateChanged();
 	}
 	
@@ -101,18 +153,18 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 			powers.get(ally2).addAlliance(ally1, enemy);
 			if (enemy.equals(powerName)) {
 				// doesn't break alliances with us, aggression will..
-				updateTrust(ally1, trustUpdates.alliedAgainstUs);
-				updateTrust(ally2, trustUpdates.alliedAgainstUs);
+				updateTrust(ally1, trustModifiers.alliedAgainstUs);
+				updateTrust(ally2, trustModifiers.alliedAgainstUs);
 			} else if (getAllies().contains(enemy)) {
-				updateTrust(ally1, trustUpdates.alliedAgainstOurAlly);
-				updateTrust(ally2, trustUpdates.alliedAgainstOurAlly);
+				updateTrust(ally1, trustModifiers.alliedAgainstOurAlly);
+				updateTrust(ally2, trustModifiers.alliedAgainstOurAlly);
 			}
 			stateChanged();
 		}
 	}
 	
 	public void refusedAlliance(String power) {
-		updateTrust(power, trustUpdates.refusedAlliance);
+		updateTrust(power, trustModifiers.refusedAlliance);
 		stateChanged();
 	}
 	
@@ -120,7 +172,7 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	public void addAggression(String enemy) {
 		super.addAggression(enemy);
 		powers.get(enemy).addAggression(powerName);
-		updateTrust(enemy, trustUpdates.aggression);
+		updateTrust(enemy, trustModifiers.aggression);
 		stateChanged();
 	}
 
@@ -133,7 +185,7 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 			stateChanged();
 		} else {
 			if (this.getAllies().contains(victim)) {
-				updateTrust(aggressor, trustUpdates.aggressedOurAlly);
+				updateTrust(aggressor, trustModifiers.aggressedOurAlly);
 			}
 			powers.get(victim).addAggression(aggressor);
 			powers.get(aggressor).addAggression(victim);
@@ -143,18 +195,18 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	
 	/** border militarisation */
 	public void militarisedBorder(String power) {
-		updateTrust(power, trustUpdates.militarisedBorder);
+		updateTrust(power, trustModifiers.militarisedBorder);
 		stateChanged();
 	}
 	
 	public void refusedDemilitariseBorder(String power) {
-		updateTrust(power, trustUpdates.refusedDemilitariseBorder);
+		updateTrust(power, trustModifiers.refusedDemilitariseBorder);
 		stateChanged();
 	}
 	
 	/** power refused to answer our question */
 	public void refusedInformationalQuestion(String power) {
-		updateTrust(power, trustUpdates.refusedInformationalQuestion);
+		updateTrust(power, trustModifiers.refusedInformationalQuestion);
 		stateChanged();
 	}
 	/* we don't trust a power more if it has answered out question */
