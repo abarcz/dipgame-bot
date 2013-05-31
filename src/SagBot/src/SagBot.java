@@ -2,6 +2,8 @@
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -175,8 +177,14 @@ public class SagBot extends Bot {
 		}
 
 		if(optionBoard.getOptions().size()>0){
-			Option option = optionBoard.getOptions().get(rand.nextInt(optionBoard.getOptions().size()));
+			Option option = Collections.max(optionBoard.getOptions(), new Comparator<Option>() {
+			 		public int compare(Option a, Option b) {
+						return a.compareTo(b);
+					}
+				}	
+			);
 			optionBoard.selectOption(option);
+			System.out.println("Selected => " + option.getOrders().toString());
 			return optionBoard.getSelectedOrders();
 		}
 		return new Vector<Order>(0);
