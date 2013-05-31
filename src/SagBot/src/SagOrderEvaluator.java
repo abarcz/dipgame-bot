@@ -8,8 +8,13 @@ import es.csic.iiia.fabregues.dip.orders.WVEOrder;
 
 public class SagOrderEvaluator implements OrderEvaluator{
 	private KnowledgeBase knowledgeBase;
+	private SagNegotiator negotiator;
 	
 	public SagOrderEvaluator() {
+	}
+
+	public void setNegotiator(SagNegotiator negotiator) {
+		this.negotiator = negotiator;
 	}
 	
 	public void setKnowledgeBase(KnowledgeBase base) {
