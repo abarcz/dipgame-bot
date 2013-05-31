@@ -93,6 +93,85 @@ public class SagNegotiator implements Negotiator{
 				
 			}
 
+			public void handleProposal(Propose propose) {
+				Deal deal = propose.getDeal();
+				if (deal instanceof Agree) {
+					Offer offer = ((Agree)deal).getOffer();
+					Vector<Power> too = null;
+					Illocution response = null;
+					switch (offer.getType()) {
+					case PEACE:
+						too = new Vector<Power>(1);
+						too.add(propose.getSender());
+						String powerName = too.get(0).getName();
+						if(knowledgeBase.getStrength(propose.getSender().getName()) > knowledgeBase.getStrength(knowledgeBase.getPowerName())){
+							response = new Accept(player.getMe(), too, deal);
+							knowledgeBase.addPeace(powerName);
+							log("accepted peace with " + powerName);
+						}else{
+							response = new Reject(player.getMe(), too, deal);
+							log("rejected peace with " + powerName);
+						}
+						break;
+					case ALLIANCE:
+						too = new Vector<Power>(1);
+						too.add(propose.getSender());
+						Alliance alliance = (Alliance) ((Agree) deal).getOffer();
+						String ally = too.get(0).getName();
+						if(rand.nextBoolean()){
+							response = new Accept(player.getMe(), too, deal);
+							String logString = "accepted alliance with " + ally + " against ";
+							for (Power power : alliance.getEnemyPowers()) {
+								String enemy = power.getName();
+								knowledgeBase.addAlliance(ally, enemy);
+								logString += enemy + ", ";
+							}
+							log(logString);
+						}else{
+							response = new Reject(player.getMe(), too, deal);
+							String logString = "rejected alliance with " + ally + " against ";
+							for (Power power : alliance.getEnemyPowers()) {
+								String enemy = power.getName();
+								logString += enemy + ", ";
+							}
+							log(logString);
+						}
+						break;
+					}
+					
+					// We have a new diplomaticAction to be performed
+					if (response != null) {
+						sendDialecticalAction(response);
+					}
+				}
+				// TODO: implement handler
+			}
+				
+			public void handleAccept(Accept accept) {
+				// TODO: implement handler
+			}
+				
+			public void handleReject(Reject reject) {
+				// TODO: implement handler
+			
+			}
+				
+			public void handleQuery(Query query) {
+				// TODO: implement handler
+				
+			}
+				
+			public void handleAnswer (Answer answer) {
+				// TODO: implement handler
+
+				
+			}
+				
+			public void handleInform(Inform inform) {
+				// TODO: implement handler
+				
+			}
+			
 			/** Receives only messages sent directly to me - no other recipients */
 			@Override
 			public void handleNegotiationMessage(Power from, List<Power> to, Illocution illocution) {
@@ -105,59 +184,19 @@ public class SagNegotiator implements Negotiator{
 				//		+ " text: " + illocution.getString());
 				occupied = true;
 				if (illocution instanceof Propose) {
-					Deal deal = ((Propose)illocution).getDeal();
-					if (deal instanceof Agree) {
-						Offer offer = ((Agree)deal).getOffer();
-						Vector<Power> too = null;
-						Illocution response = null;
-						switch (offer.getType()) {
-						case PEACE:
-							too = new Vector<Power>(1);
-							too.add(illocution.getSender());
-							String powerName = too.get(0).getName();
-							if(rand.nextBoolean()){
-								response = new Accept(player.getMe(), too, deal);
-								knowledgeBase.addPeace(powerName);
-								log("accepted peace with " + powerName);
-							}else{
-								response = new Reject(player.getMe(), too, deal);
-								log("rejected peace with " + powerName);
-							}
-							break;
-						case ALLIANCE:
-							too = new Vector<Power>(1);
-							too.add(illocution.getSender());
-							Alliance alliance = (Alliance) ((Agree) deal).getOffer();
-							String ally = too.get(0).getName();
-							if(rand.nextBoolean()){
-								response = new Accept(player.getMe(), too, deal);
-								String logString = "accepted alliance with " + ally + " against ";
-								for (Power power : alliance.getEnemyPowers()) {
-									String enemy = power.getName();
-									knowledgeBase.addAlliance(ally, enemy);
-									logString += enemy + ", ";
-								}
-								log(logString);
-							}else{
-								response = new Reject(player.getMe(), too, deal);
-								String logString = "rejected alliance with " + ally + " against ";
-								for (Power power : alliance.getEnemyPowers()) {
-									String enemy = power.getName();
-									logString += enemy + ", ";
-								}
-								log(logString);
-							}
-							break;
-						}
-						
-						// We have a new diplomaticAction to be performed
-						if (response != null) {
-							sendDialecticalAction(response);
-						}
-					}
+					handleProposal((Propose) illocution);
+				} else if (illocution instanceof Accept) {
+					handleAccept((Accept) illocution);
+				} else if (illocution instanceof Reject) {
+					handleReject((Reject) illocution);
+				} else if (illocution instanceof Query) {
+					handleQuery((Query) illocution);
+				} else if (illocution instanceof Answer) {
+					handleAnswer((Answer) illocution);
+				} else if (illocution instanceof Inform) {
+					handleInform((Inform) illocution);
 				}
 				occupied = false;
-				
 			}
 
 			@Override
