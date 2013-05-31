@@ -8,8 +8,13 @@ public class SagProvinceEvaluator implements ProvinceEvaluator{
 	private KnowledgeBase knowledgeBase;
 	protected final float MAX_VALUE = 200.0f;
 	protected final float MIN_VALUE = -200.0f;
+	private SagNegotiator negotiator;
 	
 	public SagProvinceEvaluator(){
+	}
+	
+	public void setNegotiator(SagNegotiator negotiator) {
+		this.negotiator = negotiator;
 	}
 	
 	public void setKnowledgeBase(KnowledgeBase base) {

@@ -20,9 +20,14 @@ public class SagOptionEvaluator implements OptionEvaluator{
 
 	private Random rand;
 	private KnowledgeBase knowledgeBase;
+	private SagNegotiator negotiator;
 	
 	public SagOptionEvaluator(){
 		rand = new Random(System.currentTimeMillis());
+	}
+
+	public void setNegotiator(SagNegotiator negotiator) {
+		this.negotiator = negotiator;
 	}
 	
 	public void setKnowledgeBase(KnowledgeBase base) {

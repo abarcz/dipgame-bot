@@ -41,9 +41,13 @@ public class SagBot extends Bot {
 	 */
 	public SagBot(InetAddress negotiationIp, int negotiationPort) {
 		super(new SagProvinceEvaluator(), new SagOrderEvaluator(), new SagOptionEvaluator());
+		this.negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
 		this.negotiationServer = negotiationIp;
 		this.negotiationPort = negotiationPort;
 		this.nextStepSemaphore = new Semaphore(0);
+		((SagOrderEvaluator) this.orderEvaluator).setNegotiator(negotiator);
+		((SagOptionEvaluator) this.optionEvaluator).setNegotiator(negotiator);
+		((SagProvinceEvaluator) this.provinceEvaluator).setNegotiator(negotiator);
 	}
 
 	@Override
@@ -85,7 +89,6 @@ public class SagBot extends Bot {
 		log("'->' stands for attack (agressor -> victim)");
 		log("\n");
 		
-		negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
 		negotiator.init();
 		negotiator.setKnowledgeBase(knowledgeBase);
 		negotiator.setGuiObserver(botObserver);

@@ -247,4 +247,21 @@ public class SagNegotiator implements Negotiator{
 	public boolean isOccupied() {
 		return occupied;
 	}
+	
+	/**
+	 * Make negotiator object negotiate this deal with other power. Assumption should be made that
+	 * this deal is or isn't successful (depending on optimistic option), as result of negotiation
+	 * is not available immediately. If setting a deal fails or succeeds, weight of the connected
+	 * order will be adjusted during option selection.
+	 * @param order This deal will be connected with a given order.
+	 * @param power Power the deal will be made with.
+	 * @param value Deal influence on the value of the connected order.
+	 * @param optimistic Optimistic deals are assumed to be successful by default, and if they fail,
+	 * 		their value is decreased during option selection. Pessimistic options are assumed to fail
+	 * 		by default, and if they succeed, their value is increased during option selection.
+	 */
+	void offerDeal (Order order, Deal deal, String power, Float value, boolean optimistic) {
+		// this is a  method stub, it will be implemented later! :P
+	}
+	
 }
