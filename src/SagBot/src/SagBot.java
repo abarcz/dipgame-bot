@@ -221,6 +221,8 @@ public class SagBot extends Bot {
 				IComm comm = new DaideComm(gameServerIp, gameServerPort, name);
 				sagBot.start(comm);
 			}  else if (args.length >= 5) {
+				for (String arg: args)
+					System.out.println(arg);
 				sagBot = new SagBot(InetAddress.getByName(args[3]), Integer.parseInt(args[4]));
 				IComm comm = new DaideComm(InetAddress.getByName(args[0]), Integer.parseInt(args[1]), name + "(" + args[2] + ")");
 				sagBot.start(comm);

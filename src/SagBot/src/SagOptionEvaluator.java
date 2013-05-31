@@ -7,6 +7,7 @@ import es.csic.iiia.fabregues.bot.OptionEvaluator;
 import es.csic.iiia.fabregues.bot.options.Option;
 import es.csic.iiia.fabregues.dip.board.Game;
 import es.csic.iiia.fabregues.dip.board.Power;
+import es.csic.iiia.fabregues.dip.orders.Order;
 
 /**
  * Class that evaluates combinations of orders, here called options, assigning to them random values.
@@ -33,7 +34,11 @@ public class SagOptionEvaluator implements OptionEvaluator{
 	 * Sets a random value to the options that evaluates
 	 */
 	public void evaluate(Option option, Game game, Power power) {
-		option.setValue(rand.nextFloat());
+		float sum = 0.0f;
+		for (Order o : option.getOrders())
+			sum += o.getValue();
+		option.setValue(sum);
+		System.out.println(option.getOrders().toString() + " => " + option.getValue());
 	}
 
 }
