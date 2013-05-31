@@ -2,25 +2,25 @@
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-import org.dipgame.dipNego.language.illocs.Accept;
-import org.dipgame.dipNego.language.illocs.Illocution;
-import org.dipgame.dipNego.language.illocs.Propose;
-import org.dipgame.dipNego.language.illocs.Reject;
-import org.dipgame.dipNego.language.infos.Agree;
-import org.dipgame.dipNego.language.infos.Deal;
-import org.dipgame.dipNego.language.offers.Alliance;
-import org.dipgame.dipNego.language.offers.Offer;
-import org.dipgame.dipNego.language.offers.Peace;
+import org.dipgame.dipNego.language.illocs.*;
+import org.dipgame.dipNego.language.infos.*;
+import org.dipgame.dipNego.language.offers.*;
 import org.dipgame.negoClient.DipNegoClient;
 import org.dipgame.negoClient.Negotiator;
 import org.dipgame.negoClient.simple.DipNegoClientHandler;
 import org.dipgame.negoClient.simple.DipNegoClientImpl;
 import org.json.JSONException;
 
+import es.csic.iiia.fabregues.bot.options.OptionBoard;
 import es.csic.iiia.fabregues.dip.Player;
 import es.csic.iiia.fabregues.dip.board.Power;
 import es.csic.iiia.fabregues.dip.orders.Order;
@@ -38,11 +38,16 @@ public class SagNegotiator implements Negotiator{
 	private int negotiationPort;
 	private InetAddress negotiationServer;
 	private DipNegoClient chat;
-	private Random rand;
 	private KnowledgeBase knowledgeBase;
 	private BotObserver observer;
+	private Random rand;
 	
 	private boolean occupied;
+	
+	/**
+	 * Bot will wait no longer than MAX_NEGOTIATION_TIME_TOTAL ms for negotiation replies.
+	 */
+	private static final long MAX_NEGOTIATION_TIME_TOTAL /* in millis */ = 60 * 1000; 
 	
 	public SagNegotiator(InetAddress negotiationIp, int negotiationPort, Player player){
 		this.negotiationServer = negotiationIp;
@@ -94,6 +99,9 @@ public class SagNegotiator implements Negotiator{
 				
 			}
 
+			/**
+			 * L1 message: we have received a deal proposal
+			 */
 			public void handleProposal(Propose propose) {
 				Deal deal = propose.getDeal();
 				if (deal instanceof Agree) {
@@ -145,32 +153,69 @@ public class SagNegotiator implements Negotiator{
 						sendDialecticalAction(response);
 					}
 				}
-				// TODO: implement handler
 			}
-				
-			public void handleAccept(Accept accept) {
-				// TODO: implement handler
-			}
-				
-			public void handleReject(Reject reject) {
-				// TODO: implement handler
-			
-			}
-				
-			public void handleQuery(Query query) {
-				// TODO: implement handler
-				
-			}
-				
-			public void handleAnswer (Answer answer) {
-				// TODO: implement handler
 
-				
+			/**
+			 * L1 message: our deal has been accepted
+			 */
+			public void handleAccept(Accept accept) {
+				final String deal_ident = accept.getDeal().toString();
+				defferedDealsMutex.lock();
+				final List<Order> orders = ordersByDealIdent.get(deal_ident);
+				if (orders != null) {
+					for (Order o : orders) {
+						dealsByOrder.get(o).setAccepted();
+					}
+					defferedDealsCondition.notifyAll();
+					log ("Our deal was accepted: " + deal_ident);
+					// TODO: we are counting on other bot to do as he declared; store this info
+					//       and adjust his reputation accordingly when orders are known.
+				} else {
+					// ???:
+					log ("Received response for unknown deal: " + deal_ident);
+				}
+				defferedDealsMutex.unlock();
 			}
-				
+
+			/**
+			 * L1 message: our deal has been rejected
+			 */
+			public void handleReject(Reject reject) {
+				final String deal_ident = reject.getDeal().toString();
+				defferedDealsMutex.lock();
+				final List<Order> orders = ordersByDealIdent.get(deal_ident);
+				if (orders != null) {
+					for (Order o : orders) {
+						dealsByOrder.get(o).setRejected();
+					}
+					defferedDealsCondition.notifyAll();
+					log ("Our deal was rejected: " + deal_ident + ". Let's pity the fool who dare to ignore our will, as he shall find himself lost to our overwhelming might.");
+				} else {
+					// ???:
+					log ("Received response for unknown deal: " + deal_ident);
+				}
+				defferedDealsMutex.unlock();
+			}
+
+			/**
+			 * L2 message: we have received a piece of information
+			 */
 			public void handleInform(Inform inform) {
 				// TODO: implement handler
-				
+			}
+
+			/**
+			 * L>=3 message: we have been queried
+			 */
+			public void handleQuery(Query query) {
+				// TODO: implement handler
+			}
+
+			/**
+			 * L>=3 message: our deal has been accepted
+			 */
+			public void handleAnswer (Answer answer) {
+				// TODO: implement handler
 			}
 			
 			/** Receives only messages sent directly to me - no other recipients */
@@ -288,6 +333,14 @@ public class SagNegotiator implements Negotiator{
 		return occupied;
 	}
 	
+	final HashMap <Order, DeferredDealResult> dealsByOrder = new HashMap <Order, DeferredDealResult>();
+	
+	final HashMap <String, List<Order> > ordersByDealIdent = new HashMap <String, List<Order> >();
+	
+	final Lock defferedDealsMutex = new ReentrantLock();
+	
+	final Condition defferedDealsCondition = defferedDealsMutex.newCondition();
+	
 	/**
 	 * Make negotiator object negotiate this deal with other power. Assumption should be made that
 	 * this deal is or isn't successful (depending on optimistic option), as result of negotiation
@@ -301,7 +354,57 @@ public class SagNegotiator implements Negotiator{
 	 * 		by default, and if they succeed, their value is increased during option selection.
 	 */
 	void offerDeal (Order order, Deal deal, String power, Float value, boolean optimistic) {
-		// this is a  method stub, it will be implemented later! :P
+		final Illocution illoc = new Propose(player.getMe(), player.getGame().getPower(power), deal);
+		final String deal_ident = deal.toString();
+		
+		defferedDealsMutex.lock();
+		if (!ordersByDealIdent.containsKey(deal_ident)) {
+			ordersByDealIdent.put(deal_ident, new LinkedList<Order>());
+		}
+		ordersByDealIdent.get(deal_ident).add(order);
+		dealsByOrder.put(order, new DeferredDealResult(order, optimistic ? 0 : -value, optimistic ? -value : 0));
+		defferedDealsMutex.unlock();
+		
+		sendDialecticalAction(illoc);
+	}
+
+	/**
+	 * Given best scenarios chosen by evaluators resolve pending negotiation requests.
+	 */
+	public void resolveNegotiations(OptionBoard scenarios) {
+		// TODO Implement: reply to pending deal proposals
+	}
+
+	/**
+	 * Update orders basing upon deferred deal results.
+	 */
+	public void updateOrders() {
+		defferedDealsMutex.lock();
+		try {
+			long wait_start = System.currentTimeMillis();
+			for (DeferredDealResult ddr : dealsByOrder.values()) {
+				while (!ddr.answered()) {
+					long wait_for = MAX_NEGOTIATION_TIME_TOTAL - System.currentTimeMillis() + wait_start;
+					if (wait_for > 0)
+							defferedDealsCondition.wait(wait_for);
+					else break;
+				}
+				if (!ddr.answered()) {
+					ddr.setRejected();
+				}
+				ddr.updateOrder();
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		defferedDealsMutex.unlock();
+	}
+
+	public void clear() {
+		defferedDealsMutex.lock();
+		dealsByOrder.clear();
+		ordersByDealIdent.clear();
+		defferedDealsMutex.unlock();
 	}
 	
 }

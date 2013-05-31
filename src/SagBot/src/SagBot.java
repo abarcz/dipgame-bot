@@ -53,7 +53,7 @@ public class SagBot extends Bot {
 	 * Sets the number of options to preselect during the search of best options
 	 */
 	protected int getNumberOfBestOptions() {
-		return 2;
+		return 10;
 	}
 
 	@Override
@@ -61,7 +61,7 @@ public class SagBot extends Bot {
 	 * Sets the number of orders per unit to preselect during the search of best orders
 	 */
 	protected int getNumberOfBestOrdersPerUnit() {
-		return 2;
+		return 10;
 	}
 	
 	protected void log(String string) {
@@ -168,28 +168,34 @@ public class SagBot extends Bot {
 	/**
 	 * Selects the orders to send from the preselected ones that are stored in optionBoard
 	 */
-	protected List<Order> selectOption(OptionBoard optionBoard) {
+	protected List<Order> selectOption(OptionBoard scenarios) {
 		if (this.botObserver.getAutoMode()) {
 			botObserver.log("starting round... waiting for GUI nextStep");
 			try {
 				nextStepSemaphore.acquire();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 
-		if(optionBoard.getOptions().size()>0){
-			Option option = Collections.max(optionBoard.getOptions(), new Comparator<Option>() {
+		negotiator.resolveNegotiations(scenarios);
+		negotiator.updateOrders();
+		Collections.sort(scenarios.getOptions());
+
+		if(scenarios.getOptions().size()>0){
+			Option option = Collections.max(scenarios.getOptions(), new Comparator<Option>() {
 			 		public int compare(Option a, Option b) {
 						return a.compareTo(b);
 					}
 				}	
 			);
-			optionBoard.selectOption(option);
+			scenarios.selectOption(option);
 			System.out.println("Selected => " + option.getOrders().toString());
-			return optionBoard.getSelectedOrders();
+			return scenarios.getSelectedOrders();
 		}
+		
+		negotiator.clear();
+		
 		return new Vector<Order>(0);
 	}
 	
