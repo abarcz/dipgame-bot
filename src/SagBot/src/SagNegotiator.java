@@ -23,6 +23,7 @@ import org.json.JSONException;
 
 import es.csic.iiia.fabregues.dip.Player;
 import es.csic.iiia.fabregues.dip.board.Power;
+import es.csic.iiia.fabregues.dip.orders.Order;
 import es.csic.iiia.fabregues.utilities.Log;
 
 /**

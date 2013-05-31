@@ -38,7 +38,6 @@ public class SagOrderEvaluator implements OrderEvaluator{
 		else {
 			order.setOrderValue(order.getLocation().getProvince().getValue());
 		}
-		System.out.println(order.toString() + " => " + order.getValue());
 	}
 	
 }

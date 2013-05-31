@@ -1,21 +1,14 @@
-
-
-
 import java.util.Random;
 
 import es.csic.iiia.fabregues.bot.OptionEvaluator;
 import es.csic.iiia.fabregues.bot.options.Option;
 import es.csic.iiia.fabregues.dip.board.Game;
 import es.csic.iiia.fabregues.dip.board.Power;
+import es.csic.iiia.fabregues.dip.board.Province;
+import es.csic.iiia.fabregues.dip.orders.MTOOrder;
 import es.csic.iiia.fabregues.dip.orders.Order;
 
-/**
- * Class that evaluates combinations of orders, here called options, assigning to them random values.
- * This class is required for the correct execution of RandomBot. Check {@link http
- * ://www.dipgame.org} for more information.
- * 
- * @author Angela Fabregues, IIIA-CSIC, fabregues@iiia.csic.es
- */
+
 public class SagOptionEvaluator implements OptionEvaluator{
 
 	private Random rand;
@@ -35,15 +28,30 @@ public class SagOptionEvaluator implements OptionEvaluator{
 	}
 
 	@Override
-	/**
-	 * Sets a random value to the options that evaluates
-	 */
 	public void evaluate(Option option, Game game, Power power) {
-		float sum = 0.0f;
-		for (Order o : option.getOrders())
-			sum += o.getValue();
-		option.setValue(sum);
-		System.out.println(option.getOrders().toString() + " => " + option.getValue());
+		if (validate(option)) {
+			float sum = 0.0f;
+			for (Order o : option.getOrders())
+				sum += o.getValue();
+			option.setValue(sum);
+		}
+	}
+	
+	private boolean validate(Option option) {
+		for (Order a : option.getOrders()) {	
+			for (Order b : option.getOrders()) {
+				if (!a.equals(b) && 
+						a instanceof MTOOrder && 
+						b instanceof MTOOrder) {
+					Province destination_a = ((MTOOrder) a).getDestination().getProvince();
+					Province destination_b = ((MTOOrder) b).getDestination().getProvince();
+					if (destination_a.equals(destination_b)) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
 	}
 
 }

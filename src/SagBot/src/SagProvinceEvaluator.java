@@ -54,7 +54,6 @@ public class SagProvinceEvaluator implements ProvinceEvaluator{
 		else if (province.getValue() < MIN_VALUE) {
 			province.setValue(MIN_VALUE);
 		}
-		System.out.println(province.getName() + " => " + province.getValue());
 	}
 
 }
