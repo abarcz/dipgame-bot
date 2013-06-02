@@ -2,8 +2,6 @@
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -11,7 +9,6 @@ import java.util.Vector;
 import java.util.concurrent.Semaphore;
 
 import es.csic.iiia.fabregues.bot.Bot;
-import es.csic.iiia.fabregues.bot.options.Option;
 import es.csic.iiia.fabregues.bot.options.OptionBoard;
 import es.csic.iiia.fabregues.dip.board.Power;
 import es.csic.iiia.fabregues.dip.board.Province;
@@ -61,7 +58,7 @@ public class SagBot extends Bot {
 	 * Sets the number of orders per unit to preselect during the search of best orders
 	 */
 	protected int getNumberOfBestOrdersPerUnit() {
-		return 2;
+		return 10;
 	}
 	
 	protected void log(String string) {
@@ -179,15 +176,27 @@ public class SagBot extends Bot {
 			}
 		}
 
-		if(optionBoard.getOptions().size()>0){
-			Option option = Collections.max(optionBoard.getOptions(), new Comparator<Option>() {
-			 		public int compare(Option a, Option b) {
-						return a.compareTo(b);
-					}
-				}	
-			);
-			optionBoard.selectOption(option);
-			System.out.println("Selected => " + option.getOrders().toString());
+		for (Province p : game.getProvinces()) {
+			System.out.println(p.getName() + " => " + knowledgeBase.getProvinceStat(p.getName()).getValue());
+			System.out.println(knowledgeBase.getProvinceStat(p.getName()));
+		}
+		
+		if(optionBoard.getOptions().size() >= 2){
+			System.out.println("First: " + optionBoard.getOptions().get(0).getValue());
+			System.out.println("Second: " + optionBoard.getOptions().get(1).getValue());
+			if (rand.nextFloat() <= 0.2) {
+				optionBoard.selectOption(optionBoard.getOptions().get(0));
+				System.out.println("Selected FIRST => " + optionBoard.getSelectedOption().getOrders());
+			}
+			else {
+				optionBoard.selectOption(optionBoard.getOptions().get(1));
+				System.out.println("Selected SECOND => " + optionBoard.getSelectedOption().getOrders());
+			}
+			return optionBoard.getSelectedOrders();
+		}
+		else if (optionBoard.getOptions().size() > 0) {
+			optionBoard.selectOption(optionBoard.getOptions().get(0));
+			System.out.println("Selected FIRST and only => " + optionBoard.getSelectedOption().getOrders());
 			return optionBoard.getSelectedOrders();
 		}
 		return new Vector<Order>(0);

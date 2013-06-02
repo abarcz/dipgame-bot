@@ -15,12 +15,14 @@ import es.csic.iiia.fabregues.dip.board.Game;
 public class KnowledgeBase extends PowerKnowledgeBase {
 	protected HashMap<String, Integer> trust;	/**< MIN_TRUST, MAX_TRUST how much we trust a power? */
 	protected HashMap<String, Integer> strength;	/**< how strong we believe a power to be? */
-	protected HashMap<String, PowerKnowledgeBase> powers;	/** knowledge about other powers knowledge */
+	protected HashMap<String, PowerKnowledgeBase> powers;	/** knowledge about other powers knowledge */	
 	
 	protected final TrustModifiers trustModifiers;	/** event->trust update */
 	protected final StrengthModifiers strengthModifiers; /** event->strength modifier */
 	protected final int MAX_TRUST = 200;
 	protected final int MIN_TRUST = -200;
+	
+	protected HashMap<String, ProvinceStat> provinces;
 	
 	public static Map<String, Integer> sortByValue(Map<String, Integer> map) {
         List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(map.entrySet());
@@ -52,6 +54,8 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		trustModifiers = new TrustModifiers();
 		strengthModifiers = new StrengthModifiers();
 		recalculateStrengths();
+		
+		provinces = new HashMap<String, ProvinceStat>();
 	}
 	
 	protected void updateTrust(String power, int update) {
@@ -210,4 +214,12 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		stateChanged();
 	}
 	/* we don't trust a power more if it has answered out question */
+	
+	public void addProvinceStat(String name, ProvinceStat stat) {
+		provinces.put(name, stat);
+	}
+	
+	public ProvinceStat getProvinceStat(String name) {
+		return provinces.get(name);
+	}
 }
