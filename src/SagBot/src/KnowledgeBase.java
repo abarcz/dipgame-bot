@@ -89,7 +89,7 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	public int getStrength(String power) {
 		return strength.get(power);
 	}
-	
+		
 	public Map<String, Integer> getSortedStrength() {
 		return sortByValue(strength);
 	}

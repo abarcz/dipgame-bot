@@ -2,9 +2,16 @@
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.Semaphore;
 
@@ -175,22 +182,31 @@ public class SagBot extends Bot {
 				e.printStackTrace();
 			}
 		}
-
+		
+		
+		
+		HashMap<String, Float> values = new HashMap<String, Float>();
 		for (Province p : game.getProvinces()) {
-			System.out.println(p.getName() + " => " + knowledgeBase.getProvinceStat(p.getName()).getValue());
-			System.out.println(knowledgeBase.getProvinceStat(p.getName()));
+			values.put(p.getName(), knowledgeBase.getProvinceStat(p.getName()).getValue());
 		}
+		Map<String, Float> sorted = sortByValues(values);
+		sorted.putAll(values);
+		
+		for (String s : sorted.keySet()) {
+			System.out.println(s + " => "+sorted.get(s) + " " + knowledgeBase.getProvinceStat(s));
+		}
+		 
 		
 		if(optionBoard.getOptions().size() >= 2){
-			System.out.println("First: " + optionBoard.getOptions().get(0).getValue());
-			System.out.println("Second: " + optionBoard.getOptions().get(1).getValue());
+			System.out.println("Second: " + optionBoard.getOptions().get(0).getValue());
+			System.out.println("First: " + optionBoard.getOptions().get(1).getValue());
 			if (rand.nextFloat() <= 0.2) {
 				optionBoard.selectOption(optionBoard.getOptions().get(0));
-				System.out.println("Selected FIRST => " + optionBoard.getSelectedOption().getOrders());
+				System.out.println("Selected SECOND => " + optionBoard.getSelectedOption().getOrders());
 			}
 			else {
 				optionBoard.selectOption(optionBoard.getOptions().get(1));
-				System.out.println("Selected SECOND => " + optionBoard.getSelectedOption().getOrders());
+				System.out.println("Selected FIRST => " + optionBoard.getSelectedOption().getOrders());
 			}
 			return optionBoard.getSelectedOrders();
 		}
@@ -201,6 +217,28 @@ public class SagBot extends Bot {
 		}
 		return new Vector<Order>(0);
 	}
+	
+	public static <K extends Comparable,V extends Comparable> Map<K,V> sortByValues(Map<K,V> map){
+        List<Map.Entry<K,V>> entries = new LinkedList<Map.Entry<K,V>>(map.entrySet());
+      
+        Collections.sort(entries, new Comparator<Map.Entry<K,V>>() {
+
+            @Override
+            public int compare(Entry<K, V> o1, Entry<K, V> o2) {
+                return o1.getValue().compareTo(o2.getValue());
+            }
+        });
+      
+        //LinkedHashMap will keep the keys in the order they are inserted
+        //which is currently sorted on natural ordering
+        Map<K,V> sortedMap = new LinkedHashMap<K,V>();
+      
+        for(Map.Entry<K,V> entry: entries){
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }
+      
+        return sortedMap;
+    }
 	
 	/**
 	 * Informs about the winner of the game and exits
