@@ -96,6 +96,8 @@ public class SagBot extends Bot {
 		negotiator.setKnowledgeBase(knowledgeBase);
 		negotiator.setGuiObserver(botObserver);
 
+		negotiator.setGame(getGame());
+		
 		((SagOrderEvaluator) this.orderEvaluator).setNegotiator(negotiator);
 		((SagOptionEvaluator) this.optionEvaluator).setNegotiator(negotiator);
 		((SagProvinceEvaluator) this.provinceEvaluator).setNegotiator(negotiator);
@@ -193,12 +195,6 @@ public class SagBot extends Bot {
 			System.out.println(s + " => "+sorted.get(s) + " " + knowledgeBase.getProvinceStat(s));
 		}
 		
-		System.out.println("Resolving negotiations...");
-		negotiator.resolveNegotiations(scenarios);
-		System.out.println("Negotiations resolved!");
-		negotiator.updateOrders();
-		Collections.sort(scenarios.getOptions());
-
 		if(scenarios.getOptions().size() >= 2){
 			System.out.println("Second: " + scenarios.getOptions().get(0).getValue());
 			System.out.println("First: " + scenarios.getOptions().get(1).getValue());

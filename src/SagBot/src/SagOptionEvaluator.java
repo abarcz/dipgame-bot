@@ -24,6 +24,7 @@ public class SagOptionEvaluator implements OptionEvaluator{
 
 	public void setNegotiator(SagNegotiator negotiator) {
 		this.negotiator = negotiator;
+		negotiator.registerEvaluator(this);
 	}
 	
 	public void setKnowledgeBase(KnowledgeBase base) {

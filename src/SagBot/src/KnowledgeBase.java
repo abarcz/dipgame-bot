@@ -222,4 +222,10 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	public ProvinceStat getProvinceStat(String name) {
 		return provinces.get(name);
 	}
+
+
+	public void clearNegotiationsData() {
+		// TODO: Data created during processing negotiations should be deleted here
+		
+	}
 }

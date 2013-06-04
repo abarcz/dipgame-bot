@@ -15,6 +15,7 @@ public class SagOrderEvaluator implements OrderEvaluator{
 
 	public void setNegotiator(SagNegotiator negotiator) {
 		this.negotiator = negotiator;
+		negotiator.registerEvaluator(this);
 	}
 	
 	public void setKnowledgeBase(KnowledgeBase base) {
@@ -25,7 +26,10 @@ public class SagOrderEvaluator implements OrderEvaluator{
 	/**
 	 * Sets a random value to the orders that evaluates
 	 */
-	public void evaluate(Order order, Game game, Power power) {		
+	public void evaluate(Order order, Game game, Power power) {
+		if (negotiator.negotiatedThisTurn())
+			negotiator.setNegotiatedThisTurn(false);
+		
 		if (order instanceof MTOOrder) {
 			order.setOrderValue(evaluateMoveOrder((MTOOrder) order));
 		}
