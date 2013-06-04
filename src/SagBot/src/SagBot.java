@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.Semaphore;
 
@@ -65,7 +64,7 @@ public class SagBot extends Bot {
 	 * Sets the number of orders per unit to preselect during the search of best orders
 	 */
 	protected int getNumberOfBestOrdersPerUnit() {
-		return 10;
+		return 5;
 	}
 	
 	protected void log(String string) {
