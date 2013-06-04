@@ -41,7 +41,6 @@ public class SagNegotiator implements Negotiator{
 	private DipNegoClient chat;
 	private KnowledgeBase knowledgeBase;
 	private BotObserver observer;
-	private Random rand;
 	
 	private boolean occupied;
 	
@@ -56,7 +55,6 @@ public class SagNegotiator implements Negotiator{
 		this.player = player;
 		this.dipLog = player.log.getLog();
 		//this.log = new Interface(name+"_"+System.currentTimeMillis());
-		this.rand = new Random(System.currentTimeMillis());
 		occupied = false;
 	}
 
