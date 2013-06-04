@@ -75,6 +75,11 @@ public class SagNegotiator implements Negotiator{
 	 * Inits the negotiation
 	 */
 	public void init() {
+		
+/*===========================================================================*/
+/*==                            DipNegoHandler:                            ==*/
+/*===========================================================================*/
+		
 		DipNegoClientHandler handler = new DipNegoClientHandler() {
 			
 			@Override
@@ -201,21 +206,111 @@ public class SagNegotiator implements Negotiator{
 			 * L2 message: we have received a piece of information
 			 */
 			public void handleInform(Inform inform) {
-				// TODO: implement handler
+				handleInform(inform.getInformation(), inform.getSender());
 			}
 
+			@SuppressWarnings("incomplete-switch") // complete for stage L4
+			public void handleInform(Information i, Power p) {
+				switch (i.getType()) {
+				case AND: // L2 info
+					org.dipgame.dipNego.language.infos.And i_and = (org.dipgame.dipNego.language.infos.And) i;
+					// TODO: implement
+					break;
+				case BELIEF: // L2 info
+					org.dipgame.dipNego.language.infos.Belief i_belief = (org.dipgame.dipNego.language.infos.Belief) i;
+					// TODO: implement
+					break;
+				case DESIRE: // L2 info
+					org.dipgame.dipNego.language.infos.Desire i_desire = (org.dipgame.dipNego.language.infos.Desire) i;
+					// TODO: implement
+					break;
+				case NOT: // L2 info
+					org.dipgame.dipNego.language.infos.Not i_not = (org.dipgame.dipNego.language.infos.Not) i;
+					// TODO: implement
+					break;
+				case OBSERV: // L2 info
+					org.dipgame.dipNego.language.infos.Observ i_observ = (org.dipgame.dipNego.language.infos.Observ) i;
+					// TODO: implement
+					break;
+				case UNKNOWN: // L3 info
+					org.dipgame.dipNego.language.infos.Unknown i_unk = (org.dipgame.dipNego.language.infos.Unknown) i;
+					// TODO: implement
+					break;
+				}
+			}
+			
 			/**
 			 * L>=3 message: we have been queried
 			 */
 			public void handleQuery(Query query) {
-				// TODO: implement handler
+				handleQuery(query.getInformation(), query.getSender());				
 			}
 
+			@SuppressWarnings("incomplete-switch") // complete for stage L4
+			void handleQuery(Information i, Power p) {
+				switch (i.getType()) {
+				case AND: // L2 info
+					org.dipgame.dipNego.language.infos.And i_and = (org.dipgame.dipNego.language.infos.And) i;
+					// TODO: implement
+					break;
+				case BELIEF: // L2 info
+					org.dipgame.dipNego.language.infos.Belief i_belief = (org.dipgame.dipNego.language.infos.Belief) i;
+					// TODO: implement
+					break;
+				case DESIRE: // L2 info
+					org.dipgame.dipNego.language.infos.Desire i_desire = (org.dipgame.dipNego.language.infos.Desire) i;
+					// TODO: implement
+					break;
+				case NOT: // L2 info
+					org.dipgame.dipNego.language.infos.Not i_not = (org.dipgame.dipNego.language.infos.Not) i;
+					// TODO: implement
+					break;
+				case OBSERV: // L2 info
+					org.dipgame.dipNego.language.infos.Observ i_observ = (org.dipgame.dipNego.language.infos.Observ) i;
+					// TODO: implement
+					break;
+				case UNKNOWN: // L3 info
+					org.dipgame.dipNego.language.infos.Unknown i_unk = (org.dipgame.dipNego.language.infos.Unknown) i;
+					// TODO: implement
+					break;
+				}
+			}
+			
 			/**
 			 * L>=3 message: our deal has been accepted
 			 */
-			public void handleAnswer (Answer answer) {
-				// TODO: implement handler
+			private void handleAnswer (Answer answer) {
+				handleAnswer(answer.getInformation(), answer.getSender());
+			}
+			
+			@SuppressWarnings("incomplete-switch") // complete for stage L4
+			private void handleAnswer (Information i, Power p) {
+				switch (i.getType()) {
+				case AND: // L2 info
+					org.dipgame.dipNego.language.infos.And i_and = (org.dipgame.dipNego.language.infos.And) i;
+					// TODO: implement
+					break;
+				case BELIEF: // L2 info
+					org.dipgame.dipNego.language.infos.Belief i_belief = (org.dipgame.dipNego.language.infos.Belief) i;
+					// TODO: implement
+					break;
+				case DESIRE: // L2 info
+					org.dipgame.dipNego.language.infos.Desire i_desire = (org.dipgame.dipNego.language.infos.Desire) i;
+					// TODO: implement
+					break;
+				case NOT: // L2 info
+					org.dipgame.dipNego.language.infos.Not i_not = (org.dipgame.dipNego.language.infos.Not) i;
+					// TODO: implement
+					break;
+				case OBSERV: // L2 info
+					org.dipgame.dipNego.language.infos.Observ i_observ = (org.dipgame.dipNego.language.infos.Observ) i;
+					// TODO: implement
+					break;
+				case UNKNOWN: // L3 info
+					org.dipgame.dipNego.language.infos.Unknown i_unk = (org.dipgame.dipNego.language.infos.Unknown) i;
+					// TODO: implement
+					break;
+				}
 			}
 			
 			/** Receives only messages sent directly to me - no other recipients */
@@ -250,7 +345,12 @@ public class SagNegotiator implements Negotiator{
 
 				
 			}
-		};
+		}; /* DipNegoHandler */
+
+/*===========================================================================*/
+/*==                        End of DipNegoHandler!                         ==*/
+/*===========================================================================*/
+		
 		chat = new DipNegoClientImpl(negotiationServer, negotiationPort, player.getMe().getName(), handler, dipLog);
 		try {
 			chat.init();
