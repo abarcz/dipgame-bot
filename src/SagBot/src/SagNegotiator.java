@@ -7,6 +7,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -108,56 +110,9 @@ public class SagNegotiator implements Negotiator{
 			 * L1 message: we have received a deal proposal
 			 */
 			public void handleProposal(Propose propose) {
-				Deal deal = propose.getDeal();
-				if (deal instanceof Agree) {
-					Offer offer = ((Agree)deal).getOffer();
-					Vector<Power> too = null;
-					Illocution response = null;
-					switch (offer.getType()) {
-					case PEACE:
-						too = new Vector<Power>(1);
-						too.add(propose.getSender());
-						String powerName = too.get(0).getName();
-						if(knowledgeBase.getStrength(propose.getSender().getName()) > knowledgeBase.getStrength(knowledgeBase.getPowerName())){
-							response = new Accept(player.getMe(), too, deal);
-							knowledgeBase.addPeace(powerName);
-							log("accepted peace with " + powerName);
-						}else{
-							response = new Reject(player.getMe(), too, deal);
-							log("rejected peace with " + powerName);
-						}
-						break;
-					case ALLIANCE:
-						too = new Vector<Power>(1);
-						too.add(propose.getSender());
-						Alliance alliance = (Alliance) ((Agree) deal).getOffer();
-						String ally = too.get(0).getName();
-						if(rand.nextBoolean()){
-							response = new Accept(player.getMe(), too, deal);
-							String logString = "accepted alliance with " + ally + " against ";
-							for (Power power : alliance.getEnemyPowers()) {
-								String enemy = power.getName();
-								knowledgeBase.addAlliance(ally, enemy);
-								logString += enemy + ", ";
-							}
-							log(logString);
-						}else{
-							response = new Reject(player.getMe(), too, deal);
-							String logString = "rejected alliance with " + ally + " against ";
-							for (Power power : alliance.getEnemyPowers()) {
-								String enemy = power.getName();
-								logString += enemy + ", ";
-							}
-							log(logString);
-						}
-						break;
-					}
-					
-					// We have a new diplomaticAction to be performed
-					if (response != null) {
-						sendDialecticalAction(response);
-					}
-				}
+				pendingProposalsMutex.lock();
+				pendingProposals.push(new PendingDeal(propose.getDeal(), propose.getSender()));
+				pendingProposalsMutex.unlock();
 			}
 
 			/**
@@ -219,6 +174,47 @@ public class SagNegotiator implements Negotiator{
 				case BELIEF: // L2 info
 					org.dipgame.dipNego.language.infos.Belief i_belief = (org.dipgame.dipNego.language.infos.Belief) i;
 					// TODO: implement
+					switch (i_belief.getOffer().getType()) {
+					case ALLIANCE:
+						break;
+					case AND:
+						break;
+					case CHOOSE:
+						break;
+					case DEMILITARISED_ZONE:
+						break;
+					case DO:
+						break;
+					case DRAW:
+						break;
+					case FOR_INTERVAL:
+						break;
+					case FOR_POINT:
+						break;
+					case IF:
+						break;
+					case IF_ELSE:
+						break;
+					case NOT:
+						break;
+					case OCCUPY:
+						break;
+					case OWES:
+						break;
+					case PEACE:
+						break;
+					case SEQUENCE:
+						break;
+					case SOLO:
+						break;
+					case SUPPORT_CENTER_DISTRIBUTION:
+						break;
+					case YOU_DO:
+						break;
+					default:
+						break;
+					
+					}
 					break;
 				case DESIRE: // L2 info
 					org.dipgame.dipNego.language.infos.Desire i_desire = (org.dipgame.dipNego.language.infos.Desire) i;
@@ -363,48 +359,6 @@ public class SagNegotiator implements Negotiator{
 		dipLog.print("Negotiation module initiated.");
 	}
 	
-	/**
-	 * Sends negotiation proposals randomly
-	 */
-	public void negotiate(){
-		if( rand.nextInt(70) == 0){
-			List<Power> available = new Vector<Power>(7);
-			for(Power power: player.getGame().getPowers()){
-				if(power.getControlledRegions().size()>0){
-					available.add(power);
-				}
-			}
-			Power receiver = available.get(rand.nextInt(available.size()));
-			if(receiver.equals(player.getMe())){
-				return;
-			}
-			Deal deal = null;
-			if(rand.nextBoolean()){
-				List<Power> peace = new Vector<Power>(2);
-				peace.add(player.getMe());
-				peace.add(receiver);
-				deal = new Agree(peace, new Peace(peace));
-			}else{
-				List<Power> peace = new Vector<Power>(2);
-				peace.add(player.getMe());
-				peace.add(receiver);
-				
-				Power againstPower = available.get(rand.nextInt(available.size()));
-				if(againstPower.equals(receiver) || againstPower.equals(player.getMe())){
-					return;
-				}
-				List<Power> against = new Vector<Power>(1);
-				against.add(againstPower);
-				deal = new Agree(peace, new Alliance(peace, against));
-			}
-			Illocution illoc = new Propose(player.getMe(), receiver, deal);
-			sendDialecticalAction(illoc);
-			//TODO update knowledgeBase
-
-			//System.out.println("sending msg to: " + receiver.getName()
-			//		+ " text: " + illoc.getString());
-		}
-	}
 	
 	/**
 	 * Sends a negotiation message
@@ -432,6 +386,31 @@ public class SagNegotiator implements Negotiator{
 	public boolean isOccupied() {
 		return occupied;
 	}
+	
+	static final class PendingDeal {
+		
+		private final Deal deal;
+		
+		private final Power power;
+		
+		PendingDeal (Deal deal, Power power) {
+			this.deal = deal;
+			this.power = power;
+		}
+
+		public Deal getDeal() {
+			return deal;
+		}
+
+		public Power getPower() {
+			return power;
+		}
+		
+	}; /* class PendingDeal */
+	
+	final LinkedList<PendingDeal> pendingProposals = new LinkedList<PendingDeal>();
+	
+	final Lock pendingProposalsMutex = new ReentrantLock();
 	
 	final HashMap <Order, DeferredDealResult> dealsByOrder = new HashMap <Order, DeferredDealResult>();
 	
@@ -472,8 +451,66 @@ public class SagNegotiator implements Negotiator{
 	 * Given best scenarios chosen by evaluators resolve pending negotiation requests.
 	 */
 	public void resolveNegotiations(OptionBoard scenarios) {
-		// TODO Implement: reply to pending deal proposals
-	}
+		
+		pendingProposalsMutex.lock();
+		while (!pendingProposals.isEmpty()) {
+			Deal deal = pendingProposals.pollLast();
+			pendingProposalsMutex.unlock();
+			
+			if (deal instanceof Agree) {
+				Offer offer = ((Agree)deal).getOffer();
+				Vector<Power> too = null;
+				Illocution response = null;
+				switch (offer.getType()) {
+				case PEACE:
+					too = new Vector<Power>(1);
+					too.add(propose.getSender());
+					String powerName = too.get(0).getName();
+					if(knowledgeBase.getStrength(propose.getSender().getName()) > knowledgeBase.getStrength(knowledgeBase.getPowerName())){
+						response = new Accept(player.getMe(), too, deal);
+						knowledgeBase.addPeace(powerName);
+						log("accepted peace with " + powerName);
+					}else{
+						response = new Reject(player.getMe(), too, deal);
+						log("rejected peace with " + powerName);
+					}
+					break;
+				case ALLIANCE:
+					too = new Vector<Power>(1);
+					too.add(propose.getSender());
+					Alliance alliance = (Alliance) ((Agree) deal).getOffer();
+					String ally = too.get(0).getName();
+					if(rand.nextBoolean()){
+						response = new Accept(player.getMe(), too, deal);
+						String logString = "accepted alliance with " + ally + " against ";
+						for (Power power : alliance.getEnemyPowers()) {
+							String enemy = power.getName();
+							knowledgeBase.addAlliance(ally, enemy);
+							logString += enemy + ", ";
+						}
+						log(logString);
+					}else{
+						response = new Reject(player.getMe(), too, deal);
+						String logString = "rejected alliance with " + ally + " against ";
+						for (Power power : alliance.getEnemyPowers()) {
+							String enemy = power.getName();
+							logString += enemy + ", ";
+						}
+						log(logString);
+					}
+					break;
+				}
+				
+				// We have a new diplomaticAction to be performed
+				if (response != null) {
+					sendDialecticalAction(response);
+				}
+			}
+			pendingProposalsMutex.lock();
+		} /* while not pending proposals is empty */
+		pendingProposalsMutex.unlock();
+		
+	} /* void resolveNegotiations () */
 
 	/**
 	 * Update orders basing upon deferred deal results.
@@ -506,5 +543,100 @@ public class SagNegotiator implements Negotiator{
 		ordersByDealIdent.clear();
 		defferedDealsMutex.unlock();
 	}
+
+/*===========================================================================*/
+/*= Parallel negotiations handling:                                         =*/
+/*===========================================================================*/
+
+	private final ExecutorService threadPool = Executors.newFixedThreadPool(2);
+	
+	private int workersWorking = 0;
+
+	private final Lock workersWorkingMutex = new ReentrantLock();
+	
+	private final Condition workersWorkingCondition = workersWorkingMutex.newCondition();
+	
+	public void negotiate(OptionBoard scenarios) {
+		threadPool.execute(new Runnable () {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				
+				workersWorkingMutex.lock();
+				workersWorking--;
+				workersWorkingCondition.signal();
+				workersWorkingMutex.unlock();
+			}
+			
+		});
+		threadPool.execute(new Runnable () {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+
+				workersWorkingMutex.lock();
+				workersWorking--;
+				workersWorkingCondition.signal();
+				workersWorkingMutex.unlock();
+			}
+			
+		});
+		workersWorkingMutex.lock();
+		workersWorking += 2;
+		try {
+			while (workersWorking != 0) {
+				workersWorkingCondition.await();
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();	
+		}
+		workersWorkingMutex.unlock();
+	}
+	
+	/*
+	 * 	/**
+	 * Sends negotiation proposals randomly
+	public void negotiate(){
+		if( rand.nextInt(70) == 0){
+			List<Power> available = new Vector<Power>(7);
+			for(Power power: player.getGame().getPowers()){
+				if(power.getControlledRegions().size()>0){
+					available.add(power);
+				}
+			}
+			Power receiver = available.get(rand.nextInt(available.size()));
+			if(receiver.equals(player.getMe())){
+				return;
+			}
+			Deal deal = null;
+			if(rand.nextBoolean()){
+				List<Power> peace = new Vector<Power>(2);
+				peace.add(player.getMe());
+				peace.add(receiver);
+				deal = new Agree(peace, new Peace(peace));
+			}else{
+				List<Power> peace = new Vector<Power>(2);
+				peace.add(player.getMe());
+				peace.add(receiver);
+				
+				Power againstPower = available.get(rand.nextInt(available.size()));
+				if(againstPower.equals(receiver) || againstPower.equals(player.getMe())){
+					return;
+				}
+				List<Power> against = new Vector<Power>(1);
+				against.add(againstPower);
+				deal = new Agree(peace, new Alliance(peace, against));
+			}
+			Illocution illoc = new Propose(player.getMe(), receiver, deal);
+			sendDialecticalAction(illoc);
+			//TODO update knowledgeBase
+
+			//System.out.println("sending msg to: " + receiver.getName()
+			//		+ " text: " + illoc.getString());
+		}
+	}
+*/
 	
 }
