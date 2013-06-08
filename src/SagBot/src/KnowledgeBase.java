@@ -9,6 +9,9 @@ import java.util.Map;
 import java.util.Vector;
 
 import es.csic.iiia.fabregues.dip.board.Game;
+import es.csic.iiia.fabregues.dip.board.Region;
+import es.csic.iiia.fabregues.dip.orders.Order;
+import es.csic.iiia.fabregues.dip.orders.SUPMTOOrder;
 
 
 /** Represents a certain agents knowledge about gameplay and other powers */
@@ -223,9 +226,34 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		return provinces.get(name);
 	}
 
+/*===========================================================================*/
+/*= Nego-zone:                                                              =*/
+/*===========================================================================*/
 
+	/**
+	 * Orders associated with regions.
+	 * 
+	 * This will hold either move order for our unit that we want supported by
+	 * other player, or a support order that we promised to other player. This
+	 * hash allows to track what deals we have made and stop promising/asking
+	 * when we have plan for a unit in the province (region).
+	 * 
+	 * If our proposal fails, associated move order is removed from the hash.
+	 * 
+	 * When normal evaluation starts this hash is used to boost values of orders
+	 * that were successfully negotiated.
+	 */
+	HashMap<Region, Order> regionAgreements = new HashMap<Region, Order>();
+	
+	public Order getRegionOrder(Region region) {
+		return regionAgreements.get(region);
+	}
+
+	public void setRegionOrder (Region region, Order order) {
+		regionAgreements.put(region, order);
+	}
+	
 	public void clearNegotiationsData() {
-		// TODO: Data created during processing negotiations should be deleted here
-		
+		regionAgreements.clear();
 	}
 }

@@ -28,7 +28,7 @@ public class ProvinceStat {
 	
 	public static class AttackSupporter {
 		private final Power power;
-		private final Vector<Province> from = new Vector<Province>();
+		private final Vector<Region> from = new Vector<Region>();
 		
 		AttackSupporter (Power power) {
 			this.power = power;
@@ -38,7 +38,7 @@ public class ProvinceStat {
 			return power;
 		}
 
-		public Vector<Province> getAttackSources() {
+		public Vector<Region> getAttackSources() {
 			return from;
 		}
 		
@@ -49,7 +49,7 @@ public class ProvinceStat {
 			return from.size();
 		}
 		
-		public void addAttackSource(Province province) {
+		public void addAttackSource(Region province) {
 			from.add(province);
 		}
 		
@@ -104,7 +104,7 @@ public class ProvinceStat {
 					} else {
 						as = possibleAllyAttackSupporters.get(controller.getName());
 					}
-					as.addAttackSource(unit.getProvince());
+					as.addAttackSource(unit);
 				}
 				// last but not least, we may want to make new alliances if it would support our case and we trust another player
 				else if (knowledgeBase.getTrust(controller.getName()) > 0 && !game.getController(province).equals(controller)) {
@@ -115,7 +115,7 @@ public class ProvinceStat {
 					} else {
 						as = possibleAttackSupporters.get(controller.getName());
 					}
-					as.addAttackSource(unit.getProvince());
+					as.addAttackSource(unit);
 				}
 			}
 		}

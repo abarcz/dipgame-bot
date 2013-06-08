@@ -3,17 +3,23 @@
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.dipgame.dipNego.language.illocs.*;
 import org.dipgame.dipNego.language.infos.*;
+import org.dipgame.dipNego.language.offers.Do;
+import org.dipgame.dipNego.language.offers.Offer;
 import org.dipgame.negoClient.DipNegoClient;
 import org.dipgame.negoClient.Negotiator;
 import org.dipgame.negoClient.simple.DipNegoClientHandler;
@@ -24,7 +30,10 @@ import es.csic.iiia.fabregues.dip.Player;
 import es.csic.iiia.fabregues.dip.board.Game;
 import es.csic.iiia.fabregues.dip.board.Power;
 import es.csic.iiia.fabregues.dip.board.Province;
+import es.csic.iiia.fabregues.dip.board.Region;
+import es.csic.iiia.fabregues.dip.orders.MTOOrder;
 import es.csic.iiia.fabregues.dip.orders.Order;
+import es.csic.iiia.fabregues.dip.orders.SUPMTOOrder;
 import es.csic.iiia.fabregues.utilities.Log;
 
 /**
@@ -42,7 +51,13 @@ public class SagNegotiator implements Negotiator{
 	private KnowledgeBase knowledgeBase;
 	private BotObserver observer;
 	
-	private boolean occupied;
+	private Boolean nowIsTheTimeOfWords;
+	
+	/**
+	 * No idea why occupied was here anyway and why is it used by framework through isOccupied, but retain it just in case.
+	 * It is probably connected with some dirty hacks or something :P
+	 */
+	private AtomicBoolean occupied;
 	
 	/**
 	 * Bot will wait no longer than MAX_NEGOTIATION_TIME_TOTAL ms for negotiation replies.
@@ -55,7 +70,8 @@ public class SagNegotiator implements Negotiator{
 		this.player = player;
 		this.dipLog = player.log.getLog();
 		//this.log = new Interface(name+"_"+System.currentTimeMillis());
-		occupied = false;
+		nowIsTheTimeOfWords = false;
+		occupied.set(false);
 	}
 
 	public void setKnowledgeBase(KnowledgeBase base) {
@@ -92,6 +108,22 @@ public class SagNegotiator implements Negotiator{
 	
 	public void setGame(Game game) {
 		this.game = game;
+	}
+	
+	public boolean evaluateSUPMTOOrder(SUPMTOOrder order) {
+		Order o = knowledgeBase.getRegionOrder(((SUPMTOOrder) order).getLocation());
+		Power sending_power = order.getSupportedOrder().getPower();
+
+		// we'll fight for most valuable province
+		if (o == null || knowledgeBase.getProvinceStat(o.getLocation().getProvince().getName()).getValue() < knowledgeBase.getProvinceStat(order.getLocation().getProvince().getName()).getValue()) {
+			if (o instanceof SUPMTOOrder) {
+				// we will support player that we trust more in the first place
+				return knowledgeBase.getTrust(sending_power.getName()) > knowledgeBase.getTrust(order.getSupportedOrder().getPower().getName());
+			} else
+				return knowledgeBase.getTrust(sending_power.getName()) > 0;
+		}
+		
+		return false;
 	}
 	
 	/**
@@ -131,51 +163,65 @@ public class SagNegotiator implements Negotiator{
 			 * L1 message: we have received a deal proposal
 			 */
 			public void handleProposal(Propose propose) {
-				pendingProposalsMutex.lock();
-				pendingProposals.push(new PendingDeal(propose.getDeal(), propose.getSender()));
-				pendingProposalsMutex.unlock();
+				final Deal deal = propose.getDeal();
+				
+				Offer offer;
+				
+				switch (deal.getType()) {
+				case AGREE:
+					offer = ((Agree) deal).getOffer();
+					switch (offer.getType()) {
+					case ALLIANCE:
+						break;
+					case DO:
+						Do offer_do = (Do) offer;
+						Order requested_order = offer_do.getOrder();
+								
+						synchronized (nowIsTheTimeOfWords) {
+							if (nowIsTheTimeOfWords) {
+								sagOrderEvaluator.evaluate(requested_order, game, knowledgeBase.getPower());
+								if (requested_order instanceof SUPMTOOrder) {
+									if (evaluateSUPMTOOrder((SUPMTOOrder) requested_order)) {
+										// send accept
+										log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Agreed!");
+									} else {
+										// send reject
+										log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Rejecting.");
+									}										
+								} else {
+									log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Only SUPMTOOrders are negotiated, rejecting.");
+								}
+							} else {
+								// A bad news is that we are not negotiating ATM. 
+								log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Not negotiationg moves now, auto rejecting.");
+							}
+						}
+						break;
+					}
+					break;
+				case COMMIT:
+					//if (offer == null)
+					// Cannot cast from Deal to Commit - srsly, dipgame?
+					//	offer = ((org.dipgame.dipNego.language.infos.Commit) deal).getOffer();
+					break;
+				default:
+					break;
+				
+				}
 			}
 
 			/**
 			 * L1 message: our deal has been accepted
 			 */
 			public void handleAccept(Accept accept) {
-				final String deal_ident = accept.getDeal().toString();
-				defferedDealsMutex.lock();
-				final List<Order> orders = ordersByDealIdent.get(deal_ident);
-				if (orders != null) {
-					for (Order o : orders) {
-						dealsByOrder.get(o).setAccepted();
-					}
-					defferedDealsCondition.notifyAll();
-					log ("Our deal was accepted: " + deal_ident);
-					// TODO: we are counting on other bot to do as he declared; store this info
-					//       and adjust his reputation accordingly when orders are known.
-				} else {
-					// ???:
-					log ("Received response for unknown deal: " + deal_ident);
-				}
-				defferedDealsMutex.unlock();
+				log ("Our deal was accepted: " + accept.getDeal().toString());
 			}
 
 			/**
 			 * L1 message: our deal has been rejected
 			 */
 			public void handleReject(Reject reject) {
-				final String deal_ident = reject.getDeal().toString();
-				defferedDealsMutex.lock();
-				final List<Order> orders = ordersByDealIdent.get(deal_ident);
-				if (orders != null) {
-					for (Order o : orders) {
-						dealsByOrder.get(o).setRejected();
-					}
-					defferedDealsCondition.notifyAll();
-					log ("Our deal was rejected: " + deal_ident + ". Let's pity the fool who dare to ignore our will, as he shall find himself lost to our overwhelming might.");
-				} else {
-					// ???:
-					log ("Received response for unknown deal: " + deal_ident);
-				}
-				defferedDealsMutex.unlock();
+				log ("Our deal was rejected: " + reject.toString() + ". Let's pity the fool who dare to ignore our will, as he shall find himself lost to our overwhelming might.");
 			}
 
 			/**
@@ -299,7 +345,7 @@ public class SagNegotiator implements Negotiator{
 				//System.out.println("received msg from: " + from.getName()
 				//		+ " to: " + recipients
 				//		+ " text: " + illocution.getString());
-				occupied = true;
+				occupied.set(true);
 				if (illocution instanceof Propose) {
 					handleProposal((Propose) illocution);
 				} else if (illocution instanceof Accept) {
@@ -313,7 +359,7 @@ public class SagNegotiator implements Negotiator{
 				} else if (illocution instanceof Inform) {
 					handleInform((Inform) illocution);
 				}
-				occupied = false;
+				occupied.set(false);
 			}
 
 			@Override
@@ -364,7 +410,7 @@ public class SagNegotiator implements Negotiator{
 
 	@Override
 	public boolean isOccupied() {
-		return occupied;
+		return occupied.get();
 	}
 	
 	static final class PendingDeal {
@@ -388,76 +434,40 @@ public class SagNegotiator implements Negotiator{
 		
 	}; /* class PendingDeal */
 	
-	final LinkedList<PendingDeal> pendingProposals = new LinkedList<PendingDeal>();
-	
-	final Lock pendingProposalsMutex = new ReentrantLock();
-	
-	final HashMap <Order, DeferredDealResult> dealsByOrder = new HashMap <Order, DeferredDealResult>();
-	
-	final HashMap <String, List<Order> > ordersByDealIdent = new HashMap <String, List<Order> >();
+	int dealsOffered_ = 0;
 	
 	final Lock defferedDealsMutex = new ReentrantLock();
 	
 	final Condition defferedDealsCondition = defferedDealsMutex.newCondition();
 	
-	/**
-	 * Make negotiator object negotiate this deal with other power. Assumption should be made that
-	 * this deal is or isn't successful (depending on optimistic option), as result of negotiation
-	 * is not available immediately. If setting a deal fails or succeeds, weight of the connected
-	 * order will be adjusted during option selection.
-	 * @param order This deal will be connected with a given order.
-	 * @param power Power the deal will be made with.
-	 * @param value Deal influence on the value of the connected order.
-	 * @param optimistic Optimistic deals are assumed to be successful by default, and if they fail,
-	 * 		their value is decreased during option selection. Pessimistic options are assumed to fail
-	 * 		by default, and if they succeed, their value is increased during option selection.
-	 */
-	void offerDeal (Order order, Deal deal, String power, Float value, boolean optimistic) {
-		// TODO: this method needs tuning, as it is written for previous concept
+	void offerDeal (Deal deal, String power) {
 		final Illocution illoc = new Propose(player.getMe(), player.getGame().getPower(power), deal);
-		final String deal_ident = deal.toString();
 		
 		defferedDealsMutex.lock();
-		if (!ordersByDealIdent.containsKey(deal_ident)) {
-			ordersByDealIdent.put(deal_ident, new LinkedList<Order>());
-		}
-		ordersByDealIdent.get(deal_ident).add(order);
-		dealsByOrder.put(order, new DeferredDealResult(order, optimistic ? 0 : -value, optimistic ? -value : 0));
+		dealsOffered_++;
 		defferedDealsMutex.unlock();
 		
+		log ("Sending deal offer to " + power + ": " + deal.toString());
 		sendDialecticalAction(illoc);
 	}
 
 	/**
-	 * Wait for resolution of our proposals and add new deal info to KB when it becomes available
+	 * Wait until all of deals we offered are answered or timeout happens
 	 */
-	public void resolveSentDealProposals() {
-		// TODO: update, this method is currently written for previous concept
+	private void waitForResponses () {
 		defferedDealsMutex.lock();
 		try {
 			long wait_start = System.currentTimeMillis();
-			for (DeferredDealResult ddr : dealsByOrder.values()) {
-				while (!ddr.answered()) {
-					long wait_for = MAX_NEGOTIATION_TIME_TOTAL - System.currentTimeMillis() + wait_start;
-					if (wait_for > 0)
-							defferedDealsCondition.wait(wait_for);
-					else break;
-				}
-				if (!ddr.answered()) {
-					ddr.setRejected();
-				}
-				ddr.updateOrder();
+			while (dealsOffered_ != 0) {
+				long wait_for = MAX_NEGOTIATION_TIME_TOTAL - System.currentTimeMillis() + wait_start;
+				if (wait_for > 0)
+					defferedDealsCondition.await(wait_for, TimeUnit.MILLISECONDS);
+				else break;
 			}
+			dealsOffered_ = 0;
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		defferedDealsMutex.unlock();
-	}
-
-	public void clear() {
-		defferedDealsMutex.lock();
-		dealsByOrder.clear();
-		ordersByDealIdent.clear();
 		defferedDealsMutex.unlock();
 	}
 
@@ -467,45 +477,98 @@ public class SagNegotiator implements Negotiator{
 
 	private final static int MAX_PROVINCES_TO_NEGOTIATE = 5;
 	
+	private final static float PROPOSE_COMMON_ATTACK_TRESHOLD = 1.0f;
+	
 	@Override
 	public void negotiate() {
-		knowledgeBase.clearNegotiationsData();
-		
-		Power I = knowledgeBase.getPower();
-		
-		Vector<ProvinceStat> stats = new Vector<ProvinceStat>();
-		
-		// make initial evaluation of the provinces
-		for (Province p : game.getProvinces()) {
-			sagProvinceEvaluator.evaluate(p, game, I);
-			stats.add(knowledgeBase.getProvinceStat(p.getName()));
-		}
-		
-		Collections.sort(stats, ProvinceStat.AtDefComparator);
-		
-		int negos_left = MAX_PROVINCES_TO_NEGOTIATE;
-		
-		// beginning with possibly most valuable provinces we...
-		for (ProvinceStat ps : stats) {
-			if (negos_left-- == 0) break;
+		synchronized (nowIsTheTimeOfWords) {
+			nowIsTheTimeOfWords = true;
+			knowledgeBase.clearNegotiationsData();
 			
-			// ... may request for attack support
-			if (ps.attack != 0) {
-				if (!ps.getPossibleAllyAttackSupporters().isEmpty()) {
+			Power I = knowledgeBase.getPower();
+			
+			Vector<ProvinceStat> stats = new Vector<ProvinceStat>();
+			
+			// make initial evaluation of the provinces
+			for (Province p : game.getProvinces()) {
+				sagProvinceEvaluator.evaluate(p, game, I);
+				stats.add(knowledgeBase.getProvinceStat(p.getName()));
+			}
+			
+			Collections.sort(stats, ProvinceStat.AtDefComparator);
+			
+			int negos_left = MAX_PROVINCES_TO_NEGOTIATE;
+			
+			// beginning with possibly most valuable provinces we...
+			for (ProvinceStat ps : stats) {
+				if (negos_left-- == 0) break;
+				
+				final Region target_region = game.getRegion(ps.province.getName());
+				
+				// ... may request for attack support
+				if (ps.attack != 0) {
+				
+					LinkedList<MTOOrder> move_orders = new LinkedList<MTOOrder>();
 					
-				} else if (!ps.getPossibleAttackSupporters().isEmpty()) {
-					// find new friends?
+					// search for valuable attack orders
+					for (Province p : game.getAdjacentProvinces (ps.province)) {
+						Region source_region = game.getRegion(p.getName());	
+						if (game.getController(source_region).equals(knowledgeBase.getPower())) {
+							MTOOrder mto = new MTOOrder(knowledgeBase.getPower(), source_region, target_region);
+							sagOrderEvaluator.evaluate(mto, game, knowledgeBase.getPower());
+							if (mto.getValue() > PROPOSE_COMMON_ATTACK_TRESHOLD) {
+								move_orders.add(mto);
+							}
+						}
+					}
+					
+					if (move_orders.isEmpty()) continue;
+					
+					// we are interested mainly in the best attack option(s), so sort!
+					Collections.sort(move_orders, new Comparator<Order>() {
+						@Override
+						public int compare(Order o1, Order o2) {
+							return o1.getValue().compareTo(o2.getValue());
+						}
+					});
+					
+					Order region_order = knowledgeBase.getRegionOrder(move_orders.peekFirst().getLocation());
+					if (region_order == null || region_order.getValue() < move_orders.peekFirst().getValue()) {
+						knowledgeBase.setRegionOrder(move_orders.peekFirst().getLocation(), move_orders.peekFirst());
+					} else {
+						continue;
+					}
+					
+					if (!ps.getPossibleAllyAttackSupporters().isEmpty() || !ps.getPossibleAttackSupporters().isEmpty()) {
+						// attack supporters should be sorted - from the best ally (best may mean the one who we trust the most or the one who is most likely to support our case here), or from the player who is most likely to become our new ally
+						ProvinceStat.AttackSupporter as = !ps.getPossibleAllyAttackSupporters().isEmpty() ? ps.getPossibleAllyAttackSupporters().iterator().next() : ps.getPossibleAttackSupporters().iterator().next();
+						
+						for (Region region : as.getAttackSources()) {
+							SUPMTOOrder ally_sup = new SUPMTOOrder(as.getPower(), region, move_orders.getFirst());
+							org.dipgame.dipNego.language.offers.Do offer = new org.dipgame.dipNego.language.offers.Do(ally_sup);
+							Agree agree = new Agree ();
+							agree.addPower(as.getPower());
+							agree.setOffer(offer);
+							offerDeal (agree, as.getPower().getName());
+						}
+						
+					}
 				}
+				
+				// ... or ask for help!
+				if (ps.defence != 0) {
+					// if province is in danger and we have allies around, or we have non-allied players who might want to help us because common foe may attack
+				}
+				
 			}
 			
-			// ... or ask for help!
-			if (ps.defence != 0) {
-				// if prowincja jest zagrożona, a wokół są przyjaciele
-			}
-			
-		}
+		// we block execution of responses to proposals until dry run evaluation finishes
+		} /* synchronized (nowIsTheTimeOfWords) */
 		
-		resolveSentDealProposals ();
+		waitForResponses ();
+		synchronized (nowIsTheTimeOfWords) {
+			nowIsTheTimeOfWords = false;
+		}
 	}
 	
 	/*
