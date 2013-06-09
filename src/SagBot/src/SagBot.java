@@ -213,8 +213,6 @@ public class SagBot extends Bot {
 			return scenarios.getSelectedOrders();
 		}
 		
-		negotiator.clear();
-		
 		return new Vector<Order>(0);
 	}
 	

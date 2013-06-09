@@ -4,11 +4,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -18,6 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.dipgame.dipNego.language.illocs.*;
 import org.dipgame.dipNego.language.infos.*;
+import org.dipgame.dipNego.language.offers.Alliance;
 import org.dipgame.dipNego.language.offers.Do;
 import org.dipgame.dipNego.language.offers.Offer;
 import org.dipgame.negoClient.DipNegoClient;
@@ -51,13 +49,13 @@ public class SagNegotiator implements Negotiator{
 	private KnowledgeBase knowledgeBase;
 	private BotObserver observer;
 	
-	private Boolean nowIsTheTimeOfWords;
+	private Boolean nowIsTheTimeOfWords = new Boolean(false);
 	
 	/**
 	 * No idea why occupied was here anyway and why is it used by framework through isOccupied, but retain it just in case.
 	 * It is probably connected with some dirty hacks or something :P
 	 */
-	private AtomicBoolean occupied;
+	private AtomicBoolean occupied = new AtomicBoolean(false);
 	
 	/**
 	 * Bot will wait no longer than MAX_NEGOTIATION_TIME_TOTAL ms for negotiation replies.
@@ -111,12 +109,12 @@ public class SagNegotiator implements Negotiator{
 	}
 	
 	public boolean evaluateSUPMTOOrder(SUPMTOOrder order) {
-		Order o = knowledgeBase.getRegionOrder(((SUPMTOOrder) order).getLocation());
+		Order current_order = knowledgeBase.getRegionOrder(((SUPMTOOrder) order).getLocation());
 		Power sending_power = order.getSupportedOrder().getPower();
 
 		// we'll fight for most valuable province
-		if (o == null || knowledgeBase.getProvinceStat(o.getLocation().getProvince().getName()).getValue() < knowledgeBase.getProvinceStat(order.getLocation().getProvince().getName()).getValue()) {
-			if (o instanceof SUPMTOOrder) {
+		if (current_order == null || knowledgeBase.getProvinceStat(current_order.getLocation().getProvince().getName()).getValue() < knowledgeBase.getProvinceStat(order.getLocation().getProvince().getName()).getValue()) {
+			if (current_order instanceof SUPMTOOrder) {
 				// we will support player that we trust more in the first place
 				return knowledgeBase.getTrust(sending_power.getName()) > knowledgeBase.getTrust(order.getSupportedOrder().getPower().getName());
 			} else
@@ -164,7 +162,7 @@ public class SagNegotiator implements Negotiator{
 			 */
 			public void handleProposal(Propose propose) {
 				final Deal deal = propose.getDeal();
-				
+				final Power from = propose.getSender();
 				Offer offer;
 				
 				switch (deal.getType()) {
@@ -172,6 +170,30 @@ public class SagNegotiator implements Negotiator{
 					offer = ((Agree) deal).getOffer();
 					switch (offer.getType()) {
 					case ALLIANCE:
+						Alliance offer_alliance = (Alliance) offer;
+						
+						boolean reject_alliance = knowledgeBase.getTrust(from.getName()) < 0;
+						
+						if (!reject_alliance) for (Power enemy : offer_alliance.getEnemyPowers()) {
+							// we reject to have alliance against our ally
+							if (knowledgeBase.getAlliances().get(enemy.toString()) != null) {
+								reject_alliance = true;
+								log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because " + enemy + " is our ally.");
+								break;
+							}
+						} else {
+							log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because we do not trust " + from.getName() + " (trust is " + knowledgeBase.getTrust(from.getName()) + ").");
+						}
+						
+						if (!reject_alliance) {
+							log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Alliance was made.");
+							for (Power enemy : offer_alliance.getEnemyPowers()) {
+								knowledgeBase.addAlliance(from.getName(), enemy.getName());
+							}
+							sendAccept (from, deal);
+						} else {
+							sendReject (from, deal);							
+						}
 						break;
 					case DO:
 						Do offer_do = (Do) offer;
@@ -182,18 +204,20 @@ public class SagNegotiator implements Negotiator{
 								sagOrderEvaluator.evaluate(requested_order, game, knowledgeBase.getPower());
 								if (requested_order instanceof SUPMTOOrder) {
 									if (evaluateSUPMTOOrder((SUPMTOOrder) requested_order)) {
-										// send accept
-										log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Agreed!");
+										log("Received Propsal->Agree->Do from " + from.getName() + " with requested order:" + requested_order.toString() + ". Agreed!");
+										sendAccept(from, deal);
 									} else {
-										// send reject
-										log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Rejecting.");
-									}										
+										log("Received Propsal->Agree->Do from " + from.getName() + " with requested order:" + requested_order.toString() + ". Rejecting.");
+										sendReject(from, deal);
+									}								
 								} else {
-									log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Only SUPMTOOrders are negotiated, rejecting.");
+									log("Received Propsal->Agree->Do from " + from.getName() + " with requested order:" + requested_order.toString() + ". Only SUPMTOOrders are negotiated, rejecting.");
+									sendAccept(from, deal);
 								}
 							} else {
 								// A bad news is that we are not negotiating ATM. 
-								log("Received propsal>agree>do from " + propose.getSender().getName() + " with requested order:" + requested_order.toString() + ". Not negotiationg moves now, auto rejecting.");
+								log("Received Propsal->Agree->Do from " + from.getName() + " with requested order:" + requested_order.toString() + ". Not negotiationg moves now, auto rejecting.");
+								sendAccept(from, deal);
 							}
 						}
 						break;
@@ -215,6 +239,44 @@ public class SagNegotiator implements Negotiator{
 			 */
 			public void handleAccept(Accept accept) {
 				log ("Our deal was accepted: " + accept.getDeal().toString());
+				final Power from = accept.getSender();
+				final Deal deal = accept.getDeal();
+				final Offer offer;
+				switch (deal.getType()) {
+				case AGREE:
+					offer = ((Agree) deal).getOffer();
+					switch(offer.getType()) {
+					
+					case ALLIANCE:
+						Alliance offer_alliance = (Alliance) offer;
+						for (Power enemy : offer_alliance.getEnemyPowers()) {
+							knowledgeBase.addAlliance(from.getName(), enemy.getName());
+						}
+						break;
+					
+					case DO:
+						Do offer_do = (Do) offer;
+						Order requested_order = offer_do.getOrder();
+						
+						// if our deal was accepted we don't have to do anything
+						// special, order is already in knowledge base. Only thing left
+						// is to notify main thread that one of the proposals was
+						// answered.						
+						synchronized (nowIsTheTimeOfWords) {
+							if (nowIsTheTimeOfWords) {
+								defferedDealsMutex.lock();
+								if (--dealsOffered_ == 0) {
+									defferedDealsCondition.signalAll();
+								}
+								defferedDealsMutex.unlock();
+							}
+						}
+						
+						break;
+					
+					} /* switch offer.getType() */
+					break;
+				}
 			}
 
 			/**
@@ -222,6 +284,43 @@ public class SagNegotiator implements Negotiator{
 			 */
 			public void handleReject(Reject reject) {
 				log ("Our deal was rejected: " + reject.toString() + ". Let's pity the fool who dare to ignore our will, as he shall find himself lost to our overwhelming might.");
+				final Power from = reject.getSender();
+				final Deal deal = reject.getDeal();
+				final Offer offer;
+				switch (deal.getType()) {
+				case AGREE:
+					offer = ((Agree) deal).getOffer();
+					switch(offer.getType()) {
+					
+					case ALLIANCE:
+						knowledgeBase.refusedAlliance(from.getName());
+						break;
+					
+					case DO:
+						Do offer_do = (Do) offer;
+						Order requested_order = offer_do.getOrder();
+						
+						synchronized (nowIsTheTimeOfWords) {
+							if (nowIsTheTimeOfWords) {
+								if (requested_order instanceof SUPMTOOrder) {
+									SUPMTOOrder sup_order = (SUPMTOOrder) requested_order;
+									if (knowledgeBase.getRegionOrder(sup_order.getSupportedOrder().getLocation()).equals(sup_order.getSupportedOrder())) {
+										knowledgeBase.removeRegionOrder(sup_order.getSupportedOrder().getLocation());
+									}								
+								}
+								defferedDealsMutex.lock();
+								if (--dealsOffered_ == 0) {
+									defferedDealsCondition.signalAll();
+								}
+								defferedDealsMutex.unlock();
+							}
+						}
+						
+						break;
+					
+					} /* switch offer.getType() */
+					break;
+				}
 			}
 
 			/**
@@ -569,6 +668,21 @@ public class SagNegotiator implements Negotiator{
 		synchronized (nowIsTheTimeOfWords) {
 			nowIsTheTimeOfWords = false;
 		}
+	}
+
+
+	private void sendReject(Power to, Deal deal) {
+		Vector<Power> target = new Vector<Power>(1);
+		target.add(to);
+		Reject reject = new Reject(player.getMe(), target, deal);
+		sendDialecticalAction(reject);
+	}
+
+	private void sendAccept(Power to, Deal deal) {
+		Vector<Power> target = new Vector<Power>(1);
+		target.add(to);
+		Accept accept = new Accept(player.getMe(), target, deal);
+		sendDialecticalAction(accept);
 	}
 	
 	/*

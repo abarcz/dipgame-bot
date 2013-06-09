@@ -256,4 +256,8 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	public void clearNegotiationsData() {
 		regionAgreements.clear();
 	}
+
+	public void removeRegionOrder(Region region) {
+		regionAgreements.remove(region);		
+	}
 }
