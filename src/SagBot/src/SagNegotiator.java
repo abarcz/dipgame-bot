@@ -539,6 +539,25 @@ public class SagNegotiator implements Negotiator{
 	
 	final Condition defferedDealsCondition = defferedDealsMutex.newCondition();
 	
+	void offerAlliance (Power power, Power against) {
+		if (!knowledgeBase.getAllies().contains(power)) {
+			List<Power> target = new Vector<Power>(1);
+			target.add(player.getMe());
+			
+			List<Power> alliance_against = new Vector<Power>(1);
+			alliance_against.add(against);
+			
+			List<Power> between = new Vector<Power>(2);
+			between.add(power);
+			between.add(player.getMe());
+
+			log ("Offering alliance against " + against + " to " + power + ".");
+			
+			final Illocution alliance_illoc = new Propose(player.getMe(), power, new Agree(target, new Alliance(between, alliance_against)));
+			sendDialecticalAction(alliance_illoc);			
+		}
+	}
+	
 	void offerDeal (Deal deal, String power) {
 		final Illocution illoc = new Propose(player.getMe(), player.getGame().getPower(power), deal);
 		
@@ -648,6 +667,7 @@ public class SagNegotiator implements Negotiator{
 							Agree agree = new Agree ();
 							agree.addPower(as.getPower());
 							agree.setOffer(offer);
+							offerAlliance (as.getPower(), game.getController(ally_sup.getSupportedOrder().getDestination()));
 							offerDeal (agree, as.getPower().getName());
 						}
 						
