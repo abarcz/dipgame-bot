@@ -163,7 +163,6 @@ public class SagBot extends Bot {
 				}
 			}
 		}
-		negotiator.negotiate();
 	}
 	
 	public void addAggression(String aggressor, String victim) {
