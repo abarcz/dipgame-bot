@@ -60,7 +60,7 @@ public class SagBot extends Bot {
 	 * Sets the number of options to preselect during the search of best options
 	 */
 	protected int getNumberOfBestOptions() {
-		return 2;
+		return 10;
 	}
 
 	@Override
@@ -105,6 +105,8 @@ public class SagBot extends Bot {
 			negotiator.setGuiObserver(botObserver);
 		}
 
+		negotiator.setGame(getGame());
+		
 		((SagOrderEvaluator) this.orderEvaluator).setNegotiator(negotiator);
 		((SagOptionEvaluator) this.optionEvaluator).setNegotiator(negotiator);
 		((SagProvinceEvaluator) this.provinceEvaluator).setNegotiator(negotiator);
@@ -181,7 +183,7 @@ public class SagBot extends Bot {
 	/**
 	 * Selects the orders to send from the preselected ones that are stored in optionBoard
 	 */
-	protected List<Order> selectOption(OptionBoard optionBoard) {
+	protected List<Order> selectOption(OptionBoard scenarios) {
 		if (useGui) {
 			if (this.botObserver.getAutoMode()) {
 				botObserver.log("starting round... waiting for GUI nextStep");
@@ -206,27 +208,25 @@ public class SagBot extends Bot {
 			System.out.println(s + " => "+sorted.get(s) + " " + knowledgeBase.getProvinceStat(s));
 		}
 		
-		
-		// TODO Request for support - timeout?
-		
-		if (optionBoard.getOptions().size() >= 2){
-			System.out.println("Second: " + optionBoard.getOptions().get(0).getValue());
-			System.out.println("First: " + optionBoard.getOptions().get(1).getValue());
+		if(scenarios.getOptions().size() >= 2){
+			System.out.println("Second: " + scenarios.getOptions().get(0).getValue());
+			System.out.println("First: " + scenarios.getOptions().get(1).getValue());
 			if (rand.nextFloat() <= 0.2) {
-				optionBoard.selectOption(optionBoard.getOptions().get(0));
-				System.out.println("Selected SECOND => " + optionBoard.getSelectedOption().getOrders());
+				scenarios.selectOption(scenarios.getOptions().get(0));
+				System.out.println("Selected SECOND => " + scenarios.getSelectedOption().getOrders());
 			}
 			else {
-				optionBoard.selectOption(optionBoard.getOptions().get(1));
-				System.out.println("Selected FIRST => " + optionBoard.getSelectedOption().getOrders());
+				scenarios.selectOption(scenarios.getOptions().get(1));
+				System.out.println("Selected FIRST => " + scenarios.getSelectedOption().getOrders());
 			}
-			return optionBoard.getSelectedOrders();
+			return scenarios.getSelectedOrders();
 		}
-		else if (optionBoard.getOptions().size() > 0) {
-			optionBoard.selectOption(optionBoard.getOptions().get(0));
-			System.out.println("Selected FIRST and only => " + optionBoard.getSelectedOption().getOrders());
-			return optionBoard.getSelectedOrders();
+		else if (scenarios.getOptions().size() > 0) {
+			scenarios.selectOption(scenarios.getOptions().get(0));
+			System.out.println("Selected FIRST and only => " + scenarios.getSelectedOption().getOrders());
+			return scenarios.getSelectedOrders();
 		}
+		
 		return new Vector<Order>(0);
 	}
 	

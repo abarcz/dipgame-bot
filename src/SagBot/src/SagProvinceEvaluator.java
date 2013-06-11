@@ -11,6 +11,7 @@ public class SagProvinceEvaluator implements ProvinceEvaluator {
 
 	public void setNegotiator(SagNegotiator negotiator) {
 		this.negotiator = negotiator;
+		negotiator.registerEvaluator(this);
 	}
 
 	public void setKnowledgeBase(KnowledgeBase base) {
@@ -19,6 +20,11 @@ public class SagProvinceEvaluator implements ProvinceEvaluator {
 
 	@Override
 	public void evaluate(Province province, Game game, Power power) {
+		if (!negotiator.negotiatedThisTurn()) {
+			negotiator.setNegotiatedThisTurn (true);
+			negotiator.negotiate();
+		}
+		
 		ProvinceStat stat = new ProvinceStat(province, power, game, knowledgeBase);
 		if (province.getValue() == null) province.setValue(0.0f);
 
