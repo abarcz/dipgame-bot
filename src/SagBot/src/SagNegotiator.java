@@ -2,8 +2,10 @@
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
@@ -60,7 +62,7 @@ public class SagNegotiator implements Negotiator{
 	/**
 	 * Bot will wait no longer than MAX_NEGOTIATION_TIME_TOTAL ms for negotiation replies.
 	 */
-	private static final long MAX_NEGOTIATION_TIME_TOTAL /* in millis */ = 60 * 1000; 
+	private static final long MAX_NEGOTIATION_TIME_TOTAL /* in millis */ = 1 * 1000; 
 	
 	public SagNegotiator(InetAddress negotiationIp, int negotiationPort, Player player){
 		this.negotiationServer = negotiationIp;
@@ -367,32 +369,39 @@ public class SagNegotiator implements Negotiator{
 				handleQuery(query.getInformation(), query.getSender());				
 			}
 
-			@SuppressWarnings("incomplete-switch") // complete for stage L4
-			void handleQuery(Information i, Power p) {
+			void handleQuery(Information i, Power sender) {			
+				final Offer offer;
 				switch (i.getType()) {
-				case AND: // L2 info
-					org.dipgame.dipNego.language.infos.And i_and = (org.dipgame.dipNego.language.infos.And) i;
-					// TODO: implement
+				case AGREE:
+					offer = ((Agree) i).getOffer();
+					switch(offer.getType()) {
+					case ALLIANCE:
+						final Alliance alliance = (Alliance) offer;
+						final Power alliance_against = alliance.getEnemyPowers().iterator().next();
+						
+						// do we even want to answer this query? We want if:
+						// - I  - it is ally who asks
+						// - II - question concerns our enemy and we believe that the one who asks and alliance_against are also enemies
+						if (
+						/* I  */  knowledgeBase.getAllies().contains(sender.getName())
+					||  /* II */ (knowledgeBase.getWars().contains(alliance_against.getName()) && knowledgeBase.getPowerKnowledge(sender.getName()).getWars().contains(alliance_against.getName()))
+						) {
+							final Power allied_with = FromPlayerListNotMe(alliance.getAlliedPowers());
+							final Answer ans;
+							if (knowledgeBase.getAlliances().containsKey(allied_with.getName()) && knowledgeBase.getAlliances().get(allied_with.getName()).contains(alliance_against.getName())) {
+								ans = new Answer(knowledgeBase.getPower(), AsPlayerList(sender), i);
+							} else {
+								ans = new Answer(knowledgeBase.getPower(), AsPlayerList(sender), new Not(i));
+							}
+							sendDialecticalAction(ans);
+						} else {
+							// we refuse to answer
+							// we do not know how to refuse to answer, so we ignore this query :P
+						}
+						break;
+					}
 					break;
-				case BELIEF: // L2 info
-					org.dipgame.dipNego.language.infos.Belief i_belief = (org.dipgame.dipNego.language.infos.Belief) i;
-					// TODO: implement
-					break;
-				case DESIRE: // L2 info
-					org.dipgame.dipNego.language.infos.Desire i_desire = (org.dipgame.dipNego.language.infos.Desire) i;
-					// TODO: implement
-					break;
-				case NOT: // L2 info
-					org.dipgame.dipNego.language.infos.Not i_not = (org.dipgame.dipNego.language.infos.Not) i;
-					// TODO: implement
-					break;
-				case OBSERV: // L2 info
-					org.dipgame.dipNego.language.infos.Observ i_observ = (org.dipgame.dipNego.language.infos.Observ) i;
-					// TODO: implement
-					break;
-				case UNKNOWN: // L3 info
-					org.dipgame.dipNego.language.infos.Unknown i_unk = (org.dipgame.dipNego.language.infos.Unknown) i;
-					// TODO: implement
+				default:
 					break;
 				}
 			}
@@ -401,35 +410,33 @@ public class SagNegotiator implements Negotiator{
 			 * L>=3 message: our deal has been accepted
 			 */
 			private void handleAnswer (Answer answer) {
-				handleAnswer(answer.getInformation(), answer.getSender());
+				log("Received answer from " + answer.getSender() + ": " + answer.toString());
+				handleAnswer(answer.getInformation(), answer.getSender(), false);
 			}
 			
-			@SuppressWarnings("incomplete-switch") // complete for stage L4
-			private void handleAnswer (Information i, Power p) {
+			private void handleAnswer (Information i, Power sender, boolean negated) {
+				final Offer offer;
 				switch (i.getType()) {
-				case AND: // L2 info
-					org.dipgame.dipNego.language.infos.And i_and = (org.dipgame.dipNego.language.infos.And) i;
-					// TODO: implement
-					break;
-				case BELIEF: // L2 info
-					org.dipgame.dipNego.language.infos.Belief i_belief = (org.dipgame.dipNego.language.infos.Belief) i;
-					// TODO: implement
-					break;
-				case DESIRE: // L2 info
-					org.dipgame.dipNego.language.infos.Desire i_desire = (org.dipgame.dipNego.language.infos.Desire) i;
-					// TODO: implement
+				case AGREE:
+					offer = ((Agree) i).getOffer();
+					switch(offer.getType()) {
+					case ALLIANCE:
+						final Alliance alliance = (Alliance) offer;
+						final Power alliance_against = alliance.getEnemyPowers().iterator().next();
+						if (!negated) {
+							knowledgeBase.getPowerKnowledge(sender.getName()).addAlliance(FromPlayerListNotPower(alliance.getAlliedPowers(), sender).getName(), alliance_against.getName());
+						} else {
+							knowledgeBase.getPowerKnowledge(sender.getName()).removeAlliance(FromPlayerListNotPower(alliance.getAlliedPowers(), sender).getName(), alliance_against.getName());
+						}
+						
+						break;
+					}
 					break;
 				case NOT: // L2 info
 					org.dipgame.dipNego.language.infos.Not i_not = (org.dipgame.dipNego.language.infos.Not) i;
-					// TODO: implement
+					handleAnswer(i_not.getNegatedInformation(), sender, true);
 					break;
-				case OBSERV: // L2 info
-					org.dipgame.dipNego.language.infos.Observ i_observ = (org.dipgame.dipNego.language.infos.Observ) i;
-					// TODO: implement
-					break;
-				case UNKNOWN: // L3 info
-					org.dipgame.dipNego.language.infos.Unknown i_unk = (org.dipgame.dipNego.language.infos.Unknown) i;
-					// TODO: implement
+				default:
 					break;
 				}
 			}
@@ -485,6 +492,22 @@ public class SagNegotiator implements Negotiator{
 	}
 	
 	
+	protected static Power FromPlayerListNotPower(List<Power> powers, Power notPower) {
+		final Iterator<Power> iter = powers.iterator();
+		while (iter.hasNext()) {
+			Power pow = iter.next();
+			if (!pow.equals(notPower))
+				return pow;
+		}
+		return null;
+	}
+	
+	
+	protected Power FromPlayerListNotMe(List<Power> powers) {
+		final Power I = knowledgeBase.getPower();
+		return FromPlayerListNotPower(powers, I);
+	}
+
 	/**
 	 * Sends a negotiation message
 	 * @param illoc
@@ -599,6 +622,11 @@ public class SagNegotiator implements Negotiator{
 	
 	@Override
 	public void negotiate() {
+		
+		for (Power p : game.getNonDeadPowers()) {
+			queryInformation(p);
+		}
+		
 		synchronized (nowIsTheTimeOfWords) {
 			nowIsTheTimeOfWords = true;
 			knowledgeBase.clearNegotiationsData();
@@ -690,6 +718,30 @@ public class SagNegotiator implements Negotiator{
 		}
 	}
 
+
+	private void queryInformation(Power ask_power) {
+		for (Power with_power : game.getNonDeadPowers()) {
+			if (with_power.equals(ask_power) || with_power.equals(knowledgeBase.getPower())) continue;
+			for (Power against_power : game.getNonDeadPowers()) {
+				if (with_power.equals(ask_power)) continue;
+				final Illocution alliance_query = new Query(player.getMe(), AsPlayerList(ask_power), new Agree(AsPlayerList(ask_power), new Alliance(AsPlayerList(ask_power, with_power), AsPlayerList(against_power))));
+				sendDialecticalAction(alliance_query);
+			}
+		}
+	}
+
+	private static List<Power> AsPlayerList(Power p1, Power p2) {
+		ArrayList<Power> power_list = new ArrayList<Power>(2);
+		power_list.add(p1);
+		power_list.add(p2);
+		return power_list;
+	}
+
+	private static List<Power> AsPlayerList(Power p) {
+		ArrayList<Power> power_list = new ArrayList<Power>(1);
+		power_list.add(p);
+		return power_list;
+	}
 
 	private void sendReject(Power to, Deal deal) {
 		Vector<Power> target = new Vector<Power>(1);

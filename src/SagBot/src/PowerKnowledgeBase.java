@@ -128,4 +128,11 @@ public class PowerKnowledgeBase extends Observable {
 		this.peaceTreaties.remove(enemy);
 		this.alliances.get(enemy).clear();
 	}
+
+	public void removeAlliance(String ally, String enemy) {
+		assert(otherPowerNames.contains(ally));
+		assert(otherPowerNames.contains(enemy));
+		this.alliances.get(ally).remove(enemy);
+	}
+	
 }
