@@ -40,15 +40,19 @@ public class SagBot extends Bot {
 	private String powerName;
 	private KnowledgeBase knowledgeBase;
 	private Semaphore nextStepSemaphore;
+	final private Boolean useGui;
 	
 	/**
 	 *
 	 */
-	public SagBot(InetAddress negotiationIp, int negotiationPort) {
+	public SagBot(InetAddress negotiationIp, int negotiationPort, Boolean useGui) {
 		super(new SagProvinceEvaluator(), new SagOrderEvaluator(), new SagOptionEvaluator());
 		this.negotiationServer = negotiationIp;
 		this.negotiationPort = negotiationPort;
 		this.nextStepSemaphore = new Semaphore(0);
+		Random generator = new Random();
+		name = "SagBot" + Math.abs(generator.nextInt());
+		this.useGui = useGui;
 	}
 
 	@Override
@@ -68,22 +72,26 @@ public class SagBot extends Bot {
 	}
 	
 	protected void log(String string) {
-		botObserver.log(string);
+		if (useGui) {
+			botObserver.log(string);
+		}
 	}
 
 	@Override
 	public void init() {
 		rand = new Random(System.currentTimeMillis());
 	}
-	
+
 	@Override
 	public void start() {
 		powerName = getMe().getName();
 		knowledgeBase = new KnowledgeBase(powerName, game);
 		
-		botObserver = new BotObserver(knowledgeBase, nextStepSemaphore);
-		knowledgeBase.addObserver(botObserver);
-		knowledgeBase.stateChanged();
+		if (useGui) {
+			botObserver = new BotObserver(knowledgeBase, nextStepSemaphore);
+			knowledgeBase.addObserver(botObserver);
+			knowledgeBase.stateChanged();
+		}
 
 		log("We are " + powerName);
 		log("Map " + mapName);
@@ -93,7 +101,9 @@ public class SagBot extends Bot {
 		this.negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
 		negotiator.init();
 		negotiator.setKnowledgeBase(knowledgeBase);
-		negotiator.setGuiObserver(botObserver);
+		if (useGui) {
+			negotiator.setGuiObserver(botObserver);
+		}
 
 		((SagOrderEvaluator) this.orderEvaluator).setNegotiator(negotiator);
 		((SagOptionEvaluator) this.optionEvaluator).setNegotiator(negotiator);
@@ -172,16 +182,17 @@ public class SagBot extends Bot {
 	 * Selects the orders to send from the preselected ones that are stored in optionBoard
 	 */
 	protected List<Order> selectOption(OptionBoard optionBoard) {
-		if (this.botObserver.getAutoMode()) {
-			botObserver.log("starting round... waiting for GUI nextStep");
-			try {
-				nextStepSemaphore.acquire();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		if (useGui) {
+			if (this.botObserver.getAutoMode()) {
+				botObserver.log("starting round... waiting for GUI nextStep");
+				try {
+					nextStepSemaphore.acquire();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		}
-		
 		
 		
 		HashMap<String, Float> values = new HashMap<String, Float>();
@@ -246,7 +257,9 @@ public class SagBot extends Bot {
 	 */
 	@Override
 	public void handleSlo(String winner) {
-		botObserver.powerWon(winner);
+		if (useGui) {
+			botObserver.powerWon(winner);
+		}
 	}
 	
 	public void exit(){
@@ -265,24 +278,25 @@ public class SagBot extends Bot {
 		SagBot sagBot = null;
 		String usageString = "Usage:\n  " + name + " <ip> <port> <name>  <negotiation ip> <negotiation port>";
 		try {
-			if (args.length == 0) {
+			if ((args.length == 0) || (args.length == 1)) {
 				InetAddress negoServerIp;
 				int negoServerPort;
 				InetAddress gameServerIp;
 				int gameServerPort;
-				String name = "SagBot";
+				
 				gameServerIp = InetAddress.getLocalHost();
 				gameServerPort = 16713;
 				negoServerIp = InetAddress.getLocalHost();
 				negoServerPort = 16714;
 				System.out.println(name + " connecting to: " + gameServerIp + ":" + gameServerPort);
-				sagBot = new SagBot(negoServerIp, negoServerPort);
+				Boolean useGui = (args.length != 1);	// dirty trick for disabling gui
+				sagBot = new SagBot(negoServerIp, negoServerPort, useGui);
 				IComm comm = new DaideComm(gameServerIp, gameServerPort, name);
 				sagBot.start(comm);
 			}  else if (args.length >= 5) {
 				for (String arg: args)
 					System.out.println(arg);
-				sagBot = new SagBot(InetAddress.getByName(args[3]), Integer.parseInt(args[4]));
+				sagBot = new SagBot(InetAddress.getByName(args[3]), Integer.parseInt(args[4]), false);
 				IComm comm = new DaideComm(InetAddress.getByName(args[0]), Integer.parseInt(args[1]), name + "(" + args[2] + ")");
 				sagBot.start(comm);
 			} else {

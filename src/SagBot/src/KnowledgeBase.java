@@ -183,8 +183,10 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	public void addAggression(String aggressor, String victim) {
 		if (victim.equals(powerName)) {
 			this.addAggression(aggressor);
+			powers.get(aggressor).addAggression(powerName);
 		} else if (aggressor.equals(powerName)) {
 			powers.get(victim).addAggression(powerName);
+			super.addAggression(victim);
 			// no trust update, we still trust them :)
 			stateChanged();
 		} else {
