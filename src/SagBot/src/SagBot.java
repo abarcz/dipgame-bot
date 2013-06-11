@@ -205,25 +205,25 @@ public class SagBot extends Bot {
 		sorted.putAll(values);
 		
 		for (String s : sorted.keySet()) {
-			System.out.println(s + " => "+sorted.get(s) + " " + knowledgeBase.getProvinceStat(s));
+			//System.out.println(s + " => "+sorted.get(s) + " " + knowledgeBase.getProvinceStat(s));
 		}
 		
 		if(scenarios.getOptions().size() >= 2){
-			System.out.println("Second: " + scenarios.getOptions().get(0).getValue());
-			System.out.println("First: " + scenarios.getOptions().get(1).getValue());
+			//System.out.println("Second: " + scenarios.getOptions().get(0).getValue());
+			//System.out.println("First: " + scenarios.getOptions().get(1).getValue());
 			if (rand.nextFloat() <= 0.2) {
 				scenarios.selectOption(scenarios.getOptions().get(0));
-				System.out.println("Selected SECOND => " + scenarios.getSelectedOption().getOrders());
+				//System.out.println("Selected SECOND => " + scenarios.getSelectedOption().getOrders());
 			}
 			else {
 				scenarios.selectOption(scenarios.getOptions().get(1));
-				System.out.println("Selected FIRST => " + scenarios.getSelectedOption().getOrders());
+				//System.out.println("Selected FIRST => " + scenarios.getSelectedOption().getOrders());
 			}
 			return scenarios.getSelectedOrders();
 		}
 		else if (scenarios.getOptions().size() > 0) {
 			scenarios.selectOption(scenarios.getOptions().get(0));
-			System.out.println("Selected FIRST and only => " + scenarios.getSelectedOption().getOrders());
+			//System.out.println("Selected FIRST and only => " + scenarios.getSelectedOption().getOrders());
 			return scenarios.getSelectedOrders();
 		}
 		

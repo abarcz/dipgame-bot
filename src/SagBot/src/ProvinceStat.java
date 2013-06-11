@@ -96,7 +96,7 @@ public class ProvinceStat {
 				if (controller.equals(power))
 					strength++;
 				// doing things with friends is more fun, so why not conquer some lands together? ^^ 
-				else if (knowledgeBase.getAllies().contains(controller.getName()) && !game.getController(province).equals(controller)) {
+				else if (knowledgeBase.getAllies().contains(controller.getName()) && (game.getController(province) != null) && !game.getController(province).equals(controller)) {
 					final AttackSupporter as;
 					if (!possibleAllyAttackSupporters.containsKey(controller.getName())) {
 						as = new AttackSupporter(controller);
@@ -107,7 +107,7 @@ public class ProvinceStat {
 					as.addAttackSource(unit);
 				}
 				// last but not least, we may want to make new alliances if it would support our case and we trust another player
-				else if (knowledgeBase.getTrust(controller.getName()) > 0 && !game.getController(province).equals(controller)) {
+				else if (knowledgeBase.getTrust(controller.getName()) > 0  && (game.getController(province) != null) && !game.getController(province).equals(controller)) {
 					final AttackSupporter as;
 					if (!possibleAttackSupporters.containsKey(controller.getName())) {
 						as = new AttackSupporter(controller);

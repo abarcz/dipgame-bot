@@ -2,6 +2,7 @@
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.Vector;
 
 import es.csic.iiia.fabregues.dip.board.Game;
+import es.csic.iiia.fabregues.dip.board.Power;
 import es.csic.iiia.fabregues.dip.board.Region;
 import es.csic.iiia.fabregues.dip.orders.Order;
 import es.csic.iiia.fabregues.dip.orders.SUPMTOOrder;
@@ -78,6 +80,14 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 			return this;
 		} else {
 			return powers.get(power);
+		}
+	}
+	
+	public Power getPower(String power){
+		if (power.equals(this.powerName)) {
+			return getPower();
+		} else {
+			return powers.get(power).getPower();
 		}
 	}
 	
@@ -200,7 +210,12 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 			powers.get(aggressor).addAggression(victim);
 			stateChanged();
 		}
-	}	
+	}
+	
+	/** enemy knows that I'm allied with 'ally' against him */
+	public void heKnowsAboutMyAlliance(String ally, String enemy) {
+		
+	}
 	
 	/** border militarisation */
 	public void militarisedBorder(String power) {
@@ -226,6 +241,52 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 	
 	public ProvinceStat getProvinceStat(String name) {
 		return provinces.get(name);
+	}
+	
+
+	/** how large would be the profit of such an alliance? */
+	public int evaluateAlliance(String ally, String enemy) {
+		if (ally.equals(enemy)) {
+			return 0;
+		}
+
+		int score = 50 + this.trust.get(ally);
+		if (score < -50) {
+			// we don't trust them at all
+			return score;
+		}
+		if (this.alliances.get(enemy).size() > 0) {
+			return 0;	// we don't want to ally against an ally
+		}
+		
+		score += this.alliances.get(ally).size() * 10;	// we're already allied with them against other powers
+		
+		for (String hisEnemy : this.powers.get(ally).getWars()) {
+			if (this.getWars().contains(hisEnemy)) {
+				score += 50;	// we're at war with the same enemy
+			}
+		}
+		return score;
+	}
+	
+	public AllianceEvaluation proposeBestAlliance() {
+		AllianceEvaluation eval = new AllianceEvaluation("", "", -1000);
+		for (String ally : this.otherPowerNames) {
+			for (String enemy : this.otherPowerNames) {
+				if (ally.equals(enemy)) {
+					continue;
+				}
+				if (this.alliances.get(ally).contains(enemy)) {
+					continue;	// we're already allied
+				}
+				int value = evaluateAlliance(ally, enemy);
+				//System.out.println(" * " + ally + " vs. " + enemy + " : " + value);
+				if (value > eval.eval) {
+					eval = new AllianceEvaluation(ally, enemy, value);
+				}
+			}
+		}
+		return eval;
 	}
 
 /*===========================================================================*/

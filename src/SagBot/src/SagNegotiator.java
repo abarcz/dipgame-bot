@@ -60,7 +60,7 @@ public class SagNegotiator implements Negotiator{
 	/**
 	 * Bot will wait no longer than MAX_NEGOTIATION_TIME_TOTAL ms for negotiation replies.
 	 */
-	private static final long MAX_NEGOTIATION_TIME_TOTAL /* in millis */ = 60 * 1000; 
+	private static final long MAX_NEGOTIATION_TIME_TOTAL /* in millis */ = 2 * 1000; 
 	
 	public SagNegotiator(InetAddress negotiationIp, int negotiationPort, Player player){
 		this.negotiationServer = negotiationIp;
@@ -183,6 +183,15 @@ public class SagNegotiator implements Negotiator{
 							}
 						} else {
 							log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because we do not trust " + from.getName() + " (trust is " + knowledgeBase.getTrust(from.getName()) + ").");
+						}
+						
+						int allianceEval = 0;
+						if (!reject_alliance) for (Power enemy : offer_alliance.getEnemyPowers()) {
+							// check the alliance evaluation
+							allianceEval += knowledgeBase.evaluateAlliance(from.getName(), enemy.getName());
+						}
+						if (allianceEval <= 0) {
+							reject_alliance = true;
 						}
 						
 						if (!reject_alliance) {
@@ -602,6 +611,15 @@ public class SagNegotiator implements Negotiator{
 		synchronized (nowIsTheTimeOfWords) {
 			nowIsTheTimeOfWords = true;
 			knowledgeBase.clearNegotiationsData();
+			
+			// alliance anyone?
+			AllianceEvaluation bestAllianceEval = knowledgeBase.proposeBestAlliance();
+			System.out.println(bestAllianceEval.ally + " vs. " + bestAllianceEval.enemy + " : " + bestAllianceEval.eval);
+			if (bestAllianceEval.eval > 0) {
+				offerAlliance(knowledgeBase.getPower(bestAllianceEval.ally),
+						knowledgeBase.getPower(bestAllianceEval.enemy));
+			}
+			
 			
 			Power I = knowledgeBase.getPower();
 			
