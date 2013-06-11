@@ -614,7 +614,7 @@ public class SagNegotiator implements Negotiator{
 			
 			// alliance anyone?
 			AllianceEvaluation bestAllianceEval = knowledgeBase.proposeBestAlliance();
-			System.out.println(bestAllianceEval.ally + " vs. " + bestAllianceEval.enemy + " : " + bestAllianceEval.eval);
+			//System.out.println(bestAllianceEval.ally + " vs. " + bestAllianceEval.enemy + " : " + bestAllianceEval.eval);
 			if (bestAllianceEval.eval > 0) {
 				offerAlliance(knowledgeBase.getPower(bestAllianceEval.ally),
 						knowledgeBase.getPower(bestAllianceEval.enemy));

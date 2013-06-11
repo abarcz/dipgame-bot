@@ -249,18 +249,21 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		if (ally.equals(enemy)) {
 			return 0;
 		}
+		if (this.alliances.get(enemy).size() > 0) {
+			return 0;	// we don't want to ally against an ally
+		}
+		if ((this.trust.get(enemy) >= 0) && !this.getWars().contains(enemy)){
+			return 0;	// why should we hurt them?
+		}
 
-		int score = 50 + this.trust.get(ally);
+		int score = this.trust.get(ally);
 		if (score < -50) {
 			// we don't trust them at all
 			return score;
 		}
-		if (this.alliances.get(enemy).size() > 0) {
-			return 0;	// we don't want to ally against an ally
-		}
 		
-		score += this.alliances.get(ally).size() * 10;	// we're already allied with them against other powers
-		
+		score += this.trust.get(enemy) / 4;
+	
 		for (String hisEnemy : this.powers.get(ally).getWars()) {
 			if (this.getWars().contains(hisEnemy)) {
 				score += 50;	// we're at war with the same enemy
