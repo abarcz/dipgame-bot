@@ -737,13 +737,25 @@ public class SagNegotiator implements Negotiator{
 	}
 
 
+	// btw this method should be named 'interrogate'
 	private void queryInformation(Power ask_power) {
+		// L3: ask for information about alliances
 		for (Power with_power : game.getNonDeadPowers()) {
 			if (with_power.equals(ask_power) || with_power.equals(knowledgeBase.getPower())) continue;
 			for (Power against_power : game.getNonDeadPowers()) {
 				if (with_power.equals(ask_power)) continue;
 				final Illocution alliance_query = new Query(player.getMe(), AsPlayerList(ask_power), new Agree(AsPlayerList(ask_power), new Alliance(AsPlayerList(ask_power, with_power), AsPlayerList(against_power))));
 				sendDialecticalAction(alliance_query);
+			}
+		}
+		// L4: ask allies if they have told someone about our alliance (or if our ally pretended we are not allies)
+		if (knowledgeBase.getAllies().contains(ask_power.getName())) {
+			// asking power is the power that asked power we ask
+			for (Power asking_power : game.getNonDeadPowers()) {
+				if (asking_power.equals(ask_power) || asking_power.equals(knowledgeBase.getPower())) continue;
+				// Cannot form an L4 query - srsly, dipgame?
+				//final Illocution shared_alliance_query = new Query(player.getMe(), AsPlayerList(ask_power), new Answer(asking_power, AsPlayerList(ask_power), new Agree(AsPlayerList(ask_power), new Alliance(AsPlayerList(ask_power, with_power), AsPlayerList(against_power))));
+				//sendDialecticalAction(alliance_query);
 			}
 		}
 	}
