@@ -178,7 +178,7 @@ public class SagNegotiator implements Negotiator{
 						
 						if (!reject_alliance) for (Power enemy : offer_alliance.getEnemyPowers()) {
 							// we reject to have alliance against our ally
-							if (knowledgeBase.getAlliances().get(enemy.toString()) != null) {
+							if (knowledgeBase.getAlliances().get(enemy.toString()).size() > 0) {
 								reject_alliance = true;
 								log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because " + enemy + " is our ally.");
 								break;
@@ -194,6 +194,8 @@ public class SagNegotiator implements Negotiator{
 						}
 						if (allianceEval <= 0) {
 							reject_alliance = true;
+							log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because we find no value in it");
+							
 						}
 						
 						if (!reject_alliance) {
@@ -419,7 +421,9 @@ public class SagNegotiator implements Negotiator{
 			 * L>=3 message: our deal has been accepted
 			 */
 			private void handleAnswer (Answer answer) {
-				log("Received answer from " + answer.getSender() + ": " + answer.toString());
+				if (!answer.getSender().getName().equals(knowledgeBase.getPower().getName())) {
+					log("Received answer from " + answer.getSender() + ": " + answer.toString());
+				}
 				handleAnswer(answer.getInformation(), answer.getSender(), false);
 			}
 			
