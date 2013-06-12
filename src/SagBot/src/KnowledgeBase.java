@@ -271,6 +271,20 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		}
 		return score;
 	}
+
+	public int getTotalAllianceStrength () {
+		int str = getStrength(getPower().getName());
+		for (String ally : getAllies()) {
+			str += getStrength(ally);
+		}
+		return str;
+	}
+	
+	/** Returns whether or not making peace with power is a good idea for us */
+	public boolean evaluatePeace(String powerName) {
+		return (int) (1.15f * (float) getStrength(powerName)) > getTotalAllianceStrength();
+	}
+	
 	
 	public AllianceEvaluation proposeBestAlliance() {
 		AllianceEvaluation eval = new AllianceEvaluation("", "", -1000);

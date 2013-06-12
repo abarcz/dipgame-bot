@@ -20,6 +20,7 @@ import org.dipgame.dipNego.language.infos.*;
 import org.dipgame.dipNego.language.offers.Alliance;
 import org.dipgame.dipNego.language.offers.Do;
 import org.dipgame.dipNego.language.offers.Offer;
+import org.dipgame.dipNego.language.offers.Peace;
 import org.dipgame.negoClient.DipNegoClient;
 import org.dipgame.negoClient.Negotiator;
 import org.dipgame.negoClient.simple.DipNegoClientHandler;
@@ -206,6 +207,16 @@ public class SagNegotiator implements Negotiator{
 							sendReject (from, deal);							
 						}
 						break;
+					case PEACE:
+						Peace offer_peace = (Peace) offer;
+						Power other_power = FromPlayerListNotMe(offer_peace.getPowers());
+						if (knowledgeBase.evaluatePeace(other_power.getName())) {
+							sendAccept (from, deal);
+							knowledgeBase.addPeace(from.getName());
+						} else {
+							sendReject (from, deal);
+						}
+						break;
 					case DO:
 						Do offer_do = (Do) offer;
 						Order requested_order = offer_do.getOrder();
@@ -264,7 +275,12 @@ public class SagNegotiator implements Negotiator{
 							knowledgeBase.addAlliance(from.getName(), enemy.getName());
 						}
 						break;
-					
+
+					case PEACE:
+						Peace offer_peace = (Peace) offer;
+						knowledgeBase.addPeace(from.getName());
+						break;
+						
 					case DO:
 						Do offer_do = (Do) offer;
 						Order requested_order = offer_do.getOrder();
@@ -306,7 +322,12 @@ public class SagNegotiator implements Negotiator{
 					case ALLIANCE:
 						knowledgeBase.refusedAlliance(from.getName());
 						break;
-					
+
+					case PEACE:
+						Peace offer_peace = (Peace) offer;
+						// refusedPeace in KB has no point, as we are already at war and cannot lower trust
+						break;
+						
 					case DO:
 						Do offer_do = (Do) offer;
 						Order requested_order = offer_do.getOrder();
@@ -601,6 +622,12 @@ public class SagNegotiator implements Negotiator{
 		sendDialecticalAction(illoc);
 	}
 
+	void offerPeace (Power power) {
+		Peace peace = new Peace(AsPlayerList(power, knowledgeBase.getPower()));
+		final Illocution alliance_illoc = new Propose(player.getMe(), power, new Agree(AsPlayerList(power), peace));
+		sendDialecticalAction(alliance_illoc);
+	}
+	
 	/**
 	 * Wait until all of deals we offered are answered or timeout happens
 	 */
