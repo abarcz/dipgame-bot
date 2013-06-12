@@ -262,7 +262,7 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 			return score;
 		}
 		
-		score += this.trust.get(enemy) / 4;
+		score -= this.trust.get(enemy) / 4;
 	
 		for (String hisEnemy : this.powers.get(ally).getWars()) {
 			if (this.getWars().contains(hisEnemy)) {
