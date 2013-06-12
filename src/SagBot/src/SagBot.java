@@ -40,7 +40,7 @@ public class SagBot extends Bot {
 	private String powerName;
 	private KnowledgeBase knowledgeBase;
 	private Semaphore nextStepSemaphore;
-	final private Boolean useGui;
+	private final Boolean useGui;
 	
 	/**
 	 *
@@ -72,9 +72,7 @@ public class SagBot extends Bot {
 	}
 	
 	protected void log(String string) {
-		if (useGui) {
-			botObserver.log(string);
-		}
+		botObserver.log(string);
 	}
 
 	@Override
@@ -87,11 +85,9 @@ public class SagBot extends Bot {
 		powerName = getMe().getName();
 		knowledgeBase = new KnowledgeBase(powerName, game);
 		
-		if (useGui) {
-			botObserver = new BotObserver(knowledgeBase, nextStepSemaphore);
-			knowledgeBase.addObserver(botObserver);
-			knowledgeBase.stateChanged();
-		}
+		botObserver = new BotObserver(knowledgeBase, nextStepSemaphore, !useGui);
+		knowledgeBase.addObserver(botObserver);
+		knowledgeBase.stateChanged();
 
 		log("We are " + powerName);
 		log("Map " + mapName);
@@ -101,9 +97,9 @@ public class SagBot extends Bot {
 		this.negotiator = new SagNegotiator(negotiationServer, negotiationPort, this);
 		negotiator.init();
 		negotiator.setKnowledgeBase(knowledgeBase);
-		if (useGui) {
-			negotiator.setGuiObserver(botObserver);
-		}
+
+		negotiator.setGuiObserver(botObserver);
+
 
 		negotiator.setGame(getGame());
 		
@@ -183,15 +179,13 @@ public class SagBot extends Bot {
 	 * Selects the orders to send from the preselected ones that are stored in optionBoard
 	 */
 	protected List<Order> selectOption(OptionBoard scenarios) {
-		if (useGui) {
-			if (this.botObserver.getAutoMode()) {
-				botObserver.log("starting round... waiting for GUI nextStep");
-				try {
-					nextStepSemaphore.acquire();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+		if (this.botObserver.getAutoMode()) {
+			botObserver.log("starting round... waiting for GUI nextStep");
+			try {
+				nextStepSemaphore.acquire();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 		
@@ -204,12 +198,16 @@ public class SagBot extends Bot {
 		sorted.putAll(values);
 		
 		for (String s : sorted.keySet()) {
-			//System.out.println(s + " => "+sorted.get(s) + " " + knowledgeBase.getProvinceStat(s));
+			System.out.println(s + " => "+sorted.get(s) + " " + knowledgeBase.getProvinceStat(s));
 		}
 		
 		if(scenarios.getOptions().size() >= 2){
-			//System.out.println("Second: " + scenarios.getOptions().get(0).getValue());
-			//System.out.println("First: " + scenarios.getOptions().get(1).getValue());
+			System.out.println("Second: " + scenarios.getOptions().get(0).getValue());
+			System.out.println("First: " + scenarios.getOptions().get(1).getValue());
+			if ((Math.round(scenarios.getOptions().get(0).getValue()) == 0) ||
+				(Math.round(scenarios.getOptions().get(1).getValue()) == 0)) {
+				return new Vector<Order>(0);
+			}
 			if (rand.nextFloat() <= 0.2) {
 				scenarios.selectOption(scenarios.getOptions().get(0));
 				//System.out.println("Selected SECOND => " + scenarios.getSelectedOption().getOrders());
@@ -256,9 +254,7 @@ public class SagBot extends Bot {
 	 */
 	@Override
 	public void handleSlo(String winner) {
-		if (useGui) {
-			botObserver.powerWon(winner);
-		}
+		botObserver.powerWon(winner);
 	}
 	
 	public void exit(){

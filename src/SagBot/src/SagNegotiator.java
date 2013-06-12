@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -188,15 +189,18 @@ public class SagNegotiator implements Negotiator{
 							log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because we do not trust " + from.getName() + " (trust is " + knowledgeBase.getTrust(from.getName()) + ").");
 						}
 						
-						int allianceEval = 0;
-						if (!reject_alliance) for (Power enemy : offer_alliance.getEnemyPowers()) {
-							// check the alliance evaluation
-							allianceEval += knowledgeBase.evaluateAlliance(from.getName(), enemy.getName());
-						}
-						if (allianceEval <= 0) {
-							reject_alliance = true;
-							log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because we find no value in it");
+						
+						if (!reject_alliance) {
+							int allianceEval = 0;
+							for (Power enemy : offer_alliance.getEnemyPowers()) {
+								// check the alliance evaluation
+								allianceEval += knowledgeBase.evaluateAlliance(from.getName(), enemy.getName());
+							}
+							if (allianceEval <= 0) {
+								reject_alliance = true;
+								log ("Received Proposal->Agree->Alliance from " + from.getName() + ": " + offer_alliance.toString() + ". Rejecting because we find no value in it");
 							
+							}
 						}
 						
 						if (!reject_alliance) {
@@ -679,6 +683,12 @@ public class SagNegotiator implements Negotiator{
 						knowledgeBase.getPower(bestAllianceEval.enemy));
 			}
 			
+			// peace?
+			String peacePower = knowledgeBase.proposeBestPeace();
+			if (!peacePower.equals("")) {
+				//offerPeace(knowledgeBase.getPower(peacePower));
+			}
+			
 			
 			Power I = knowledgeBase.getPower();
 			
@@ -771,10 +781,13 @@ public class SagNegotiator implements Negotiator{
 	// btw this method should be named 'interrogate'
 	private void queryInformation(Power ask_power) {
 		// L3: ask for information about alliances
+		Random generator = new Random();
 		for (Power with_power : game.getNonDeadPowers()) {
+			if (generator.nextInt(10) != 1) continue;
 			if (with_power.equals(ask_power) || with_power.equals(knowledgeBase.getPower())) continue;
 			for (Power against_power : game.getNonDeadPowers()) {
 				if (with_power.equals(ask_power)) continue;
+				if (generator.nextInt(10) != 1) continue;
 				final Illocution alliance_query = new Query(player.getMe(), AsPlayerList(ask_power), new Agree(AsPlayerList(ask_power), new Alliance(AsPlayerList(ask_power, with_power), AsPlayerList(against_power))));
 				sendDialecticalAction(alliance_query);
 			}

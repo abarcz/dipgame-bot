@@ -1,4 +1,5 @@
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -255,6 +256,9 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		if ((this.trust.get(enemy) >= 0) && !this.getWars().contains(enemy)){
 			return 0;	// why should we hurt them?
 		}
+		if (this.alliances.get(ally).contains(enemy)) {
+			return 0;	// we are already allied..
+		}
 
 		int score = this.trust.get(ally);
 		if (score < -50) {
@@ -285,11 +289,28 @@ public class KnowledgeBase extends PowerKnowledgeBase {
 		return (int) (1.15f * (float) getStrength(powerName)) > getTotalAllianceStrength();
 	}
 	
+	public String proposeBestPeace() {
+		List<String> names = new ArrayList<String>(this.otherPowerNames);
+		Collections.shuffle(names);
+		for (String power : names) {
+			if (this.getWars().contains(power)) {
+				if (evaluatePeace(power)) {
+					return power;
+				}
+			}
+		}
+		return "";
+	}
+	
 	
 	public AllianceEvaluation proposeBestAlliance() {
 		AllianceEvaluation eval = new AllianceEvaluation("", "", -1000);
-		for (String ally : this.otherPowerNames) {
-			for (String enemy : this.otherPowerNames) {
+		List<String> names = new ArrayList<String>(this.otherPowerNames);
+		Collections.shuffle(names);
+		List<String> names2 = new ArrayList<String>(this.otherPowerNames);
+		Collections.shuffle(names2);
+		for (String ally : names) {
+			for (String enemy : names2) {
 				if (ally.equals(enemy)) {
 					continue;
 				}

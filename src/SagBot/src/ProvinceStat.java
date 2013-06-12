@@ -144,6 +144,18 @@ public class ProvinceStat {
 		for (float f : proximity) {
 			sum += f;
 		}
+		if (owner != null) {
+			if (knowledgeBase.getAllies().contains(owner.getName())) {
+				sum -= 150;
+			} else if (knowledgeBase.getWars().contains(owner.getName())) {
+				sum += 150;
+				for (String ally : knowledgeBase.getAlliances().keySet()) {
+					if (knowledgeBase.getAlliances().get(ally).contains(owner.getName())) {
+						sum += 100;
+					}
+				}
+			}
+		}
 		return sum + strength - competition;
 	}
 
