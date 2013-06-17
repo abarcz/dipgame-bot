@@ -1,17 +1,20 @@
-Projekt będzie się składać z dwóch części:
+Dla ułatwienia obserwacji wiedzy, przekonań i poczynań agenta został zaimplementowany graficzny interfejs użytkownika. Ze względu na nieczytelność informacji wypisywanych w głównym logu serwera gry, dodatkowo GUI oferuje podgląd zdarzeń świata gry zapisanych w czytelny dla człowieka sposób, przy czym akcje podejmowane przez obserwowanego gracza opatrzone są komentarzem, którym może być np powód odrzucenia propozycji sojuszu. GUI odzwierciedla przekonania i wiedzę pojedynczego (obserwowanego) agenta na temat świata gry.
+
+W szczególności GUI pokazuje dla każdego gracza biorącego udział w grze:
 \begin{itemize}
-	\item{agent na platformę DipGame}
-	\item{interfejs użytkownika (opis poniżej)}
+	\item{listę jego prowincji}
+	\item{listę jego jednostek}
+	\item{jego sojusze i toczone wojny (na tyle na ile obserwowany agent posiada wiedzę na temat danego agenta)}
 \end{itemize}
 
-Projekt powinien umożliwić podgląd bieżącej sytuacji w grze, podejmowanych decyzji oraz przekonań agentów. W tym celu zostanie zaimplementowany graficzny interfejs użytkownika, pozwalający na:
+Dla obserwowanego agenta, GUI pokazuje dodatkowo:
 \begin{itemize}
-	\item{pracę krokową - pauza po każdej turze gry lub turze każdego agenta}
-	\item{podgląd logu komunikacji między agentami}
-	\item{podgląd przekonań każdego agenta:}
-	\begin{itemize}
-		\item{jego zaufanie do poszczególnych graczy, wyrażone w punktach}
-		\item{jego porozumienia z pozostałymi graczami (sojusze, niezerwane pokoje, stan wojny)}
-		\item{inne przekonania, istotne z punktu widzenia obserwatora}
-	\end{itemize}
+	\item{jego zaufanie do poszczególnych graczy, wyrażone w punktach}
+	\item{ocenę siły pozostałych graczy z jego punktu widzenia}
+\end{itemize}
+
+Dodatkowo, GUI pozwala na:
+\begin{itemize}
+	\item{pracę krokową - pauza po każdej turze gry lub tryb automatyczny}
+	\item{podgląd w.w. przejrzystego logu zdarzeń}
 \end{itemize}
